@@ -1,0 +1,16 @@
+---
+
+parserOptions:
+  ecmaVersion: 8
+  sourceType: module
+
+env:
+  node: true
+
+extends:
+  - eslint:recommended
+
+rules:
+  no-unused-vars: 'off'
+  no-console: 'off'
+  no-empty: 'off'
