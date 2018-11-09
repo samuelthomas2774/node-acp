@@ -24,4 +24,4 @@ test:
 
 lint:
     script:
-        - npx qunit
+        - npx eslint src test tests
