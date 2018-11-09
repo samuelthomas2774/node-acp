@@ -3,14 +3,20 @@ import acpProperties from './properties';
 
 export function generateACPProperties() {
     const props = [];
+
     for (let prop of acpProperties) {
         const [name, type, description, validate] = prop;
+
         if (name.length !== 4) throw new Error('Bad name in ACP properties list: ' + name);
+
         const types = ['str', 'dec', 'hex', 'log', 'mac', 'cfb', 'bin'];
         if (!types.includes(type)) throw new Error('Bad type in ACP properties list for name: ' + name + ' - ' + type);
+
         if (!description) throw new Error('Missing description in ACP properties list for name: ' + name);
-        props.push({ name, type, description, validate });
+
+        props.push({name, type, description, validate});
     }
+
     return props;
 }
 
@@ -19,15 +25,15 @@ export const props = generateACPProperties();
 export const elementHeaderSize = 12;
 
 export default class Property {
-
     constructor(name, value) {
         if (name === '\x00\x00\x00\x00' && value === '\x00\x00\x00\x00') {
             name = undefined;
             value = undefined;
         }
 
-        if (name && !this.constructor.getSupportedPropertyNames().includes(name))
+        if (name && !this.constructor.getSupportedPropertyNames().includes(name)) {
             throw new Error('Invalid property name passed to Property constructor: ' + name);
+        }
 
         if (value) {
             const propType = this.constructor.getPropertyInfoString(name, 'type');
@@ -42,8 +48,9 @@ export default class Property {
             }
 
             const validate = this.constructor.getPropertyInfoString(name, 'validate');
-            if (validate && !validate(value))
+            if (validate && !validate(value)) {
                 throw new Error('Invalid value passed to validator for property ' + name + ' - type: ' + typeof value);
+            }
         }
 
         this.name = name;
@@ -74,9 +81,11 @@ export default class Property {
         if (typeof value === 'string') {
             if (value.length === 6) return value;
 
-            const macBytes = value.split(':');
-            if (macBytes.length === 6)
-                return ('').join(macBytes); // unhex
+            const mac_bytes = value.split(':');
+
+            if (mac_bytes.length === 6) {
+                return Buffer.from(''.join(mac_bytes), 'hex').toString('binary');
+            }
         }
 
         throw new Error('Invalid mac value: ' + value);
@@ -182,7 +191,8 @@ export default class Property {
     }
 
     static async parseRawElement(data) {
-        const { name, flags, size } = await this.parseRawElementHeader(data.substr(0, elementHeaderSize));
+        // eslint-disable-next-line no-unused-vars
+        const {name, flags, size} = await this.parseRawElementHeader(data.substr(0, elementHeaderSize));
         // TODO: handle flags
         return new this(name, data.substr(elementHeaderSize));
     }
@@ -228,8 +238,9 @@ export default class Property {
     }
 
     static unpackHeader(header_data) {
-        if (header_data.length !== elementHeaderSize)
+        if (header_data.length !== elementHeaderSize) {
             throw new Error('Header data must be 12 characters');
+        }
 
         const buffer = Buffer.from(header_data, 'binary');
 
@@ -239,5 +250,4 @@ export default class Property {
 
         return {name, flags, size};
     }
-
 }

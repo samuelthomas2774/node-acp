@@ -3,7 +3,6 @@
 import net from 'net';
 
 export default class Session {
-
     constructor(host, port, password) {
         this.host = host;
         this.port = port;
@@ -22,7 +21,7 @@ export default class Session {
         return new Promise((resolve, reject) => {
             this.socket = new net.Socket();
 
-            const timeout = setTimeout(() => {
+            setTimeout(() => {
                 this.reading -= 1;
                 reject('Timeout');
             }, _timeout);
@@ -31,7 +30,7 @@ export default class Session {
                 console.log('Connected', err);
                 if (err) reject(err);
                 else resolve();
-            })
+            });
 
             this.socket.on('close', had_error => {
                 this.socket = undefined;
@@ -59,18 +58,21 @@ export default class Session {
 
         data = await this.receiveSize(size, timeout);
 
-        if (this.decryptionMethod)
+        if (this.decryptionMethod) {
             data = this.decryptionMethod(data);
+        }
 
         return data;
     }
 
     send(data) {
-        if (!Buffer.isBuffer(data))
+        if (!Buffer.isBuffer(data)) {
             data = Buffer.from(data, 'binary');
+        }
 
-        if (this.encryptionMethod)
+        if (this.encryptionMethod) {
             data = this.encryptionMethod(data);
+        }
 
         if (!this.socket) return;
 
@@ -94,7 +96,6 @@ export default class Session {
             return Promise.resolve(receivedChunks.join(''));
         }
 
-        let updated = Date.now();
         let timeout;
 
         return new Promise((resolve, reject) => {
@@ -142,12 +143,12 @@ export default class Session {
     async receive(size, timeout = 10000) {
         let data = await this.receiveSize(size, timeout);
 
-        if (this.decryptionMethod)
+        if (this.decryptionMethod) {
             data = this.decryptionMethod(data);
+        }
 
         return data;
     }
-
 }
 
 export class ClientSession extends Session {

@@ -1,11 +1,10 @@
 
 import Session from './session';
 import Message from './message';
-import Property, { elementHeaderSize } from './property';
+import Property, {elementHeaderSize} from './property';
 // import { CFLBinaryPListParser } from './cflbinary';
 
 export default class Client {
-
     constructor(host, port, password) {
         this.host = host;
         this.port = port;
@@ -51,7 +50,7 @@ export default class Client {
         const replyHeader = await Message.parseRaw(reply);
 
         console.debug('Reply:', {
-            reply, replyHeader
+            reply, replyHeader,
         });
 
         if (replyHeader.errorCode !== 0) {
@@ -64,13 +63,9 @@ export default class Client {
         while (true) {
             const propHeader = await this.receivePropertyElementHeader();
             console.debug('Received property element header:', propHeader);
-            const { name, flags, size } = await Property.parseRawElementHeader(propHeader);
-            console.debug('name', name);
-            console.debug('flags', flags);
-            console.debug('size', size);
+            const {name, flags, size} = await Property.parseRawElementHeader(propHeader);
 
             const propData = await this.receive(size);
-            console.debug('prop data', propData);
 
             if (flags & 1) {
                 const errorCode = Buffer.from(propData, 'binary').readInt32BE(0);
@@ -94,7 +89,7 @@ export default class Client {
 
     async setProperties(props) {
         let payload = '';
-        for (let { name, prop } of props) {
+        for (let {prop} of props) {
             console.debug('prop', prop);
             payload += Property.composeRawElement(0, prop);
         }
@@ -111,16 +106,12 @@ export default class Client {
         }
 
         const propHeader = await this.receivePropertyElementHeader();
-        const { name, flags, size } = await Property.parseRawElementHeader(propHeader);
-        console.debug('name', name);
-        console.debug('flags', flags);
-        console.debug('size', size);
+        const {name, flags, size} = await Property.parseRawElementHeader(propHeader);
 
         const propData = await this.receive(size);
-        console.debug('prop data', propData);
 
         if (flags) {
-            const [errorCode] = Buffer.from(propData, 'binary').readUInt32BE(0);
+            const errorCode = Buffer.from(propData, 'binary').readUInt32BE(0);
             console.log('error setting value for property', name, '-', errorCode);
             return;
         }
@@ -128,8 +119,9 @@ export default class Client {
         const prop = new Property(name, propData);
         console.debug('prop', prop);
 
-        if (typeof prop.name === 'undefined' && typeof prop.value === 'undefined')
+        if (typeof prop.name === 'undefined' && typeof prop.value === 'undefined') {
             console.debug('found empty prop end marker');
+        }
     }
 
     async getFeatures() {
@@ -144,5 +136,4 @@ export default class Client {
         const replyHeader = await Message.parseRaw(this.receiveMessageHeader());
         return await this.receive(replyHeader.bodySize);
     }
-
 }

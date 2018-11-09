@@ -1,5 +1,5 @@
 const {generateACPHeaderKey} = require('../dist/message');
-const {generateACPKeystream, ACP_STATIC_KEY} = require('../dist/keystream');
+const {generateACPKeystream} = require('../dist/keystream');
 
 const QUnit = require('qunit');
 

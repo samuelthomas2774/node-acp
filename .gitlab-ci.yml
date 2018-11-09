@@ -10,6 +10,7 @@ cache:
         - node_modules/
 
 build:
+    stage: build
     script:
         - npm install
         - npx gulp build
@@ -18,5 +19,9 @@ build:
             - dist
 
 test:
+    script:
+        - npx qunit
+
+lint:
     script:
         - npx qunit

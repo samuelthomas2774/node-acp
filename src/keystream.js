@@ -10,7 +10,10 @@ export function generateACPKeystream(length) {
     let key_idx = 0;
 
     while (key_idx < length) {
-        key += String.fromCharCode((key_idx + 0x55 & 0xFF) ^ ACP_STATIC_KEY.charCodeAt(key_idx % ACP_STATIC_KEY.length));
+        key += String.fromCharCode(
+            (key_idx + 0x55 & 0xFF) ^
+            ACP_STATIC_KEY.charCodeAt(key_idx % ACP_STATIC_KEY.length)
+        );
 
         key_idx++;
     }

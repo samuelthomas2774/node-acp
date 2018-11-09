@@ -1,5 +1,4 @@
 
-const adler32 = require('adler32');
 const {default: Client} = require('..');
 
 const client = new Client('192.168.2.251', 5009, 'testing');
