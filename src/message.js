@@ -42,7 +42,7 @@ export default class Message {
             this.bodyChecksum = 1;
         } else {
             this.bodySize = typeof bodySize !== 'undefined' ? bodySize : body.length;
-            this.bodyChecksum = adler32.sum(body);
+            this.bodyChecksum = adler32.sum(Buffer.from(body, 'binary'));
         }
 
         this.key = key;
@@ -70,16 +70,16 @@ export default class Message {
 
         const magic = buffer.slice(0, 4).toString();
         const version = buffer.readInt32BE(4);
-        const header_checksum = buffer.readInt32BE(8);
+        const header_checksum = buffer.readUInt32BE(8);
         const body_checksum = buffer.readInt32BE(12);
         const body_size = buffer.readInt32BE(16);
         const flags = buffer.readInt32BE(20);
         const unused = buffer.readInt32BE(24);
         const command = buffer.readInt32BE(28);
         const error_code = buffer.readInt32BE(32);
-        const pad1 = buffer.slice(36, 36 + 12).toString();
-        const key = buffer.slice(48, 48 + 32).toString();
-        const pad2 = buffer.slice(80, 80 + 48).toString();
+        const pad1 = buffer.slice(36, 36 + 12).toString('binary');
+        const key = buffer.slice(48, 48 + 32).toString('binary');
+        const pad2 = buffer.slice(80, 80 + 48).toString('binary');
 
         const unpacked = {packed: header_data, magic, version, header_checksum, body_checksum, body_size, flags, unused, command, error_code, key, pad1, pad2};
         console.log('Unpacked', unpacked);
@@ -100,9 +100,9 @@ export default class Message {
         buffer.writeInt32BE(unused, 24);
         buffer.writeInt32BE(command, 28);
         buffer.writeInt32BE(error_code, 32);
-        buffer.write(''.padEnd(12, '\u0000'), 36, 36 + 12);
-        buffer.write(key, 48, 48 + 12);
-        buffer.write(''.padEnd(48, '\u0000'), 80, 80 + 48);
+        buffer.write(header_data.pad1 || ''.padEnd(12, '\u0000'), 36, 36 + 12, 'binary');
+        buffer.write(key, 48, 48 + 32, 'binary');
+        buffer.write(header_data.pad2 || ''.padEnd(48, '\u0000'), 80, 80 + 48, 'binary');
 
         const packed = buffer.toString('binary');
         console.log('Packed', packed);
@@ -129,10 +129,10 @@ export default class Message {
             magic, version,
             header_checksum: 0, body_checksum, body_size,
             flags, unused, command, error_code, key,
-            // pad1, pad2
+            pad1, pad2
         });
 
-        const expectedHeaderChecksum = adler32.sum(tmphdr);
+        const expectedHeaderChecksum = adler32.sum(Buffer.from(tmphdr, 'binary'));
         if (header_checksum !== expectedHeaderChecksum)
             throw new Error('Header checksum does not match');
 
@@ -142,7 +142,7 @@ export default class Message {
         if (body_data && body_size !== body_data.length)
             throw new Error('Message body size does not match available data');
 
-        if (body_data && body_checksum !== adler32.sum(body_data))
+        if (body_data && body_checksum !== adler32.sum(Buffer.from(body_data, 'binary')))
             throw new Error('Body checksum does not match');
 
         // TODO: check flags
@@ -234,15 +234,11 @@ export default class Message {
 
         const header = this.constructor.packHeader({
             magic: headerMagic, version: this.version,
-            header_checksum: adler32.sum(tmphdr), body_checksum: this.bodyChecksum, body_size: this.bodySize,
+            header_checksum: adler32.sum(Buffer.from(tmphdr, 'binary')), body_checksum: this.bodyChecksum, body_size: this.bodySize,
             flags: this.flags, unused: this.unused, command: this.command, error_code: this.errorCode, key: this.key
         });
 
         return header;
-    }
-
-    static get headerFormat() {
-        return headerFormat;
     }
 
     static get headerMagic() {

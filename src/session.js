@@ -38,9 +38,9 @@ export default class Session {
             });
 
             this.socket.on('data', data => {
-                console.debug(0, 'Receiving data', data.toString());
+                console.debug(0, 'Receiving data', data);
                 if (this.reading) return;
-                this.buffer += data.toString();
+                this.buffer += data.toString('binary');
             });
         });
     }
@@ -66,6 +66,9 @@ export default class Session {
     }
 
     send(data) {
+        if (!Buffer.isBuffer(data))
+            data = Buffer.from(data, 'binary');
+
         if (this.encryptionMethod)
             data = this.encryptionMethod(data);
 
@@ -73,7 +76,7 @@ export default class Session {
 
         return new Promise((resolve, reject) => {
             console.info(0, 'Sending data', data);
-            this.socket.write(data, 'utf-8', err => {
+            this.socket.write(data, 'binary', err => {
                 if (err) reject(err);
                 else resolve();
             });
@@ -81,11 +84,15 @@ export default class Session {
     }
 
     receiveSize(size, _timeout = 10000) {
-        const receivedChunks = [this.buffer];
-        this.buffer = '';
+        const receivedChunks = [this.buffer.substr(0, size)];
+        this.buffer = this.buffer.substr(size);
         this.reading++;
-        let receivedSize = this.buffer.length;
+        let receivedSize = receivedChunks[0].length;
         let waitingFor = size - receivedSize;
+
+        if (waitingFor <= 0) {
+            return Promise.resolve(receivedChunks.join(''));
+        }
 
         let updated = Date.now();
         let timeout;
@@ -99,14 +106,16 @@ export default class Session {
             timeout = setTimeout(defer, _timeout);
 
             const listener = data => {
+                data = data.toString('binary');
+
                 if (data.length > waitingFor) {
                     this.buffer += data.substr(waitingFor);
                     data = data.substr(0, waitingFor);
                 }
 
-                receivedChunks.push(data.toString());
-                receivedSize += data.toString().length;
-                waitingFor = waitingFor - data.toString().length;
+                receivedChunks.push(data);
+                receivedSize += data.length;
+                waitingFor = waitingFor - data.length;
 
                 clearTimeout(timeout);
 

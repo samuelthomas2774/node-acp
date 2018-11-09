@@ -26,25 +26,22 @@ export default class Property {
             value = undefined;
         }
 
-        if (name && !Property.getSupportedPropertyNames().includes(name))
+        if (name && !this.constructor.getSupportedPropertyNames().includes(name))
             throw new Error('Invalid property name passed to Property constructor: ' + name);
 
         if (value) {
-            const propType = Property.getPropertyInfoString(name, 'type');
+            const propType = this.constructor.getPropertyInfoString(name, 'type');
             const initHandlerName = `__init_${propType}`;
-            if (!this[initHandlerName]) throw new Error(`Missing handler for ${propType} property type`);
-            const initHandler = this[initHandlerName];
 
-            console.debug('Old value:', value, '- type:', typeof value);
+            if (!this[initHandlerName]) throw new Error(`Missing handler for ${propType} property type`);
+
             try {
-                value = initHandler(value);
+                value = this[initHandlerName](value);
             } catch (err) {
                 throw new Error(JSON.stringify(err, null, 4) + ' provided for ' + propType + ' property type ' + value);
             }
 
-            console.debug('New value:', value, '- type:', typeof value);
-
-            const validate = Property.getPropertyInfoString(name, 'validate');
+            const validate = this.constructor.getPropertyInfoString(name, 'validate');
             if (validate && !validate(value))
                 throw new Error('Invalid value passed to validator for property ' + name + ' - type: ' + typeof value);
         }
@@ -117,14 +114,49 @@ export default class Property {
         }
     }
 
-    toString() {
+    format() {
         if (!this.name || !this.value) return '';
 
-        const propType = this.getPropertyInfoString(this.name, 'type');
+        const propType = this.constructor.getPropertyInfoString(this.name, 'type');
         const formatHandlerName = `__format_${propType}`;
 
-        // For now just return string value
-        return this.value.toString();
+        if (!this[formatHandlerName]) throw new Error(`Missing format handler for ${propType} property type`);
+
+        return this[formatHandlerName](this.value);
+    }
+
+    __format_dec(value) {
+        return value.toString();
+    }
+
+    __format_hex(value) {
+        return '0x' + value.toString(16);
+    }
+
+    __format_mac(value) {
+        const mac_bytes = [];
+
+        for (let i = 0; i < 6; i++) {
+            mac_bytes.push(value.substr(i, 1));
+        }
+
+        return implode(':', mac_bytes);
+    }
+
+    __format_bin(value) {
+        return value.toString();
+    }
+
+    __format_cfb(value) {
+        return value.toString();
+    }
+
+    __format_log(value) {
+        return value.toString();
+    }
+
+    toString() {
+        return this.format();
     }
 
     static getSupportedPropertyNames() {
@@ -152,7 +184,7 @@ export default class Property {
     static async parseRawElement(data) {
         const { name, flags, size } = await this.parseRawElementHeader(data.substr(0, elementHeaderSize));
         // TODO: handle flags
-        return new Property(name, data.substr(elementHeaderSize));
+        return new this(name, data.substr(elementHeaderSize));
     }
 
     static async parseRawElementHeader(data) {
@@ -180,11 +212,11 @@ export default class Property {
             return this.packHeader({name, flags, size});
         } catch (err) {
             console.error('Error packing', name, flags, size, '- :', err);
+            throw err;
         }
     }
 
     static packHeader(header_data) {
-        console.log('Packing element header data', header_data);
         const {name, flags, size} = header_data;
         const buffer = Buffer.alloc(12);
 
@@ -192,24 +224,20 @@ export default class Property {
         buffer.writeUInt32BE(flags, 4);
         buffer.writeUInt32BE(size, 8);
 
-        const packed = buffer.toString('binary');
-        console.log('Packed', packed);
-        return packed;
+        return buffer.toString('binary');
     }
 
     static unpackHeader(header_data) {
-        if (header_data.length !== elementHeaderSize) throw new Error('Header data must be 12 characters');
+        if (header_data.length !== elementHeaderSize)
+            throw new Error('Header data must be 12 characters');
 
-        console.log('Unpacking element header data', header_data);
         const buffer = Buffer.from(header_data, 'binary');
 
         const name = buffer.slice(0, 4).toString();
         const flags = buffer.readUInt32BE(4);
         const size = buffer.readUInt32BE(8);
 
-        const unpacked = {name, flags, size};
-        console.log('Unpacked', unpacked);
-        return unpacked;
+        return {name, flags, size};
     }
 
 }

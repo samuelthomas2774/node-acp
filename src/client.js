@@ -4,8 +4,6 @@ import Message from './message';
 import Property, { elementHeaderSize } from './property';
 // import { CFLBinaryPListParser } from './cflbinary';
 
-import struct from 'python-struct';
-
 export default class Client {
 
     constructor(host, port, password) {
@@ -74,8 +72,8 @@ export default class Client {
             const propData = await this.receive(size);
             console.debug('prop data', propData);
 
-            if (flags) {
-                const [errorCode] = struct.unpack('>I', Buffer.from(propData, 'binary'));
+            if (flags & 1) {
+                const errorCode = Buffer.from(propData, 'binary').readInt32BE(0);
                 console.log('error requesting value for property', name, '-', errorCode);
                 continue;
             }
@@ -122,7 +120,7 @@ export default class Client {
         console.debug('prop data', propData);
 
         if (flags) {
-            const [errorCode] = struct.unpack('>I', Buffer.from(propData, 'binary'));
+            const [errorCode] = Buffer.from(propData, 'binary').readUInt32BE(0);
             console.log('error setting value for property', name, '-', errorCode);
             return;
         }
