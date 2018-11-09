@@ -10,8 +10,7 @@
     },
     "main": "dist/client.js",
     "dependencies": {
-        "adler32": "^0.1.7",
-        "python-struct": "^1.0.6"
+        "adler32": "^0.1.7"
     },
     "devDependencies": {
         "babel-core": "^6.26.3",
@@ -21,7 +20,7 @@
         "eslint-config-google": "^0.9.1",
         "gulp": "^4.0.0",
         "gulp-babel": "^7.0.1",
-        "gulp-plumber": "^1.2.0",
-        "pump": "^3.0.0"
+        "pump": "^3.0.0",
+        "qunit": "^2.8.0"
     }
 }

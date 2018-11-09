@@ -4,7 +4,6 @@
  */
 
 import { generateACPKeystream } from './keystream';
-import struct from 'python-struct';
 import adler32 from 'adler32';
 
 /**
@@ -17,7 +16,7 @@ export function generateACPHeaderKey(password) {
     const passwordLength = 0x20;
     const passwordKey = generateACPKeystream(passwordLength);
 
-    const passwordBuffer = password.substr(0, passwordLength).padStart(passwordLength, '\x00');
+    const passwordBuffer = password.substr(0, passwordLength).padEnd(passwordLength, '\x00');
     let encryptedPasswordBuffer = '';
     for (let i = 0; i < passwordLength; i++) {
         encryptedPasswordBuffer += String.fromCharCode(passwordKey.charCodeAt(i) ^ passwordBuffer.charCodeAt(i));
@@ -26,7 +25,6 @@ export function generateACPHeaderKey(password) {
     return encryptedPasswordBuffer;
 }
 
-export const headerFormat = '!4s8i12x32s48x';
 export const headerMagic = 'acpp';
 export const headerSize = 128;
 
@@ -64,6 +62,53 @@ export default class Message {
         return s;
     }
 
+    static unpackHeader(header_data) {
+        if (header_data.length !== headerSize) throw new Error('Header data must be 128 characters');
+
+        console.log('Unpacking header data', header_data);
+        const buffer = Buffer.from(header_data, 'binary');
+
+        const magic = buffer.slice(0, 4).toString();
+        const version = buffer.readInt32BE(4);
+        const header_checksum = buffer.readInt32BE(8);
+        const body_checksum = buffer.readInt32BE(12);
+        const body_size = buffer.readInt32BE(16);
+        const flags = buffer.readInt32BE(20);
+        const unused = buffer.readInt32BE(24);
+        const command = buffer.readInt32BE(28);
+        const error_code = buffer.readInt32BE(32);
+        const pad1 = buffer.slice(36, 36 + 12).toString();
+        const key = buffer.slice(48, 48 + 32).toString();
+        const pad2 = buffer.slice(80, 80 + 48).toString();
+
+        const unpacked = {packed: header_data, magic, version, header_checksum, body_checksum, body_size, flags, unused, command, error_code, key, pad1, pad2};
+        console.log('Unpacked', unpacked);
+        return unpacked;
+    }
+
+    static packHeader(header_data) {
+        console.log('Packing header data', header_data);
+        const {magic, version, header_checksum, body_checksum, body_size, flags, unused, command, error_code, key, pad1 = '', pad2 = ''} = header_data;
+        const buffer = Buffer.alloc(128);
+
+        buffer.write(magic, 0, 4);
+        buffer.writeInt32BE(version, 4);
+        buffer.writeInt32BE(header_checksum, 8);
+        buffer.writeInt32BE(body_checksum, 12);
+        buffer.writeInt32BE(body_size, 16);
+        buffer.writeInt32BE(flags, 20);
+        buffer.writeInt32BE(unused, 24);
+        buffer.writeInt32BE(command, 28);
+        buffer.writeInt32BE(error_code, 32);
+        buffer.write(''.padEnd(12, '\u0000'), 36, 36 + 12);
+        buffer.write(key, 48, 48 + 12);
+        buffer.write(''.padEnd(48, '\u0000'), 80, 80 + 48);
+
+        const packed = buffer.toString('binary');
+        console.log('Packed', packed);
+        return packed;
+    }
+
     static async parseRaw(data) {
         if (headerSize > data.length)
             throw new Error(`Need to pass at least ${headerSize} bytes`);
@@ -71,13 +116,7 @@ export default class Message {
         const header_data = data.substr(0, headerSize);
         const body_data = data.length > headerSize ? data.substr(headerSize) : undefined;
 
-        const unpackedData = struct.unpack(headerFormat, Buffer.from(header_data, 'binary'));
-
-        const [magic, version, header_checksum, body_checksum, body_size, flags, unused, command, error_code, key] = unpackedData;
-
-        console.debug('ACP message header fields (parsed not validated):', {
-            magic, version, header_checksum, body_checksum, body_size, flags, unused, command, error_code, key
-        });
+        const {magic, version, header_checksum, body_checksum, body_size, flags, unused, command, error_code, key, pad1, pad2} = this.unpackHeader(header_data);
 
         if (magic !== headerMagic)
             throw new Error('Bad header magic');
@@ -86,13 +125,15 @@ export default class Message {
         if (!versions.includes(version))
             throw new Error('Unknown version ' + version);
 
-        const tmphdr = struct.pack(headerFormat, [
+        const tmphdr = this.packHeader({
             magic, version,
-            /* header_checksum: */ 0, body_checksum, body_size,
-            flags, unused, command, error_code, key
-        ]).toString('binary');
+            header_checksum: 0, body_checksum, body_size,
+            flags, unused, command, error_code, key,
+            // pad1, pad2
+        });
 
-        if (header_checksum !== adler32.sum(tmphdr))
+        const expectedHeaderChecksum = adler32.sum(tmphdr);
+        if (header_checksum !== expectedHeaderChecksum)
             throw new Error('Header checksum does not match');
 
         if (body_data && body_size === -1)
@@ -162,12 +203,12 @@ export default class Message {
     }
 
     static composeAuthCommand(flags, password, payload) {
-        const message = new Message(0x00030001, flags, 0, 0x1a, 0, generateACPHeaderKey(password), payload);
+        const message = new Message(0x00030001, flags, 0, 0x1a, 0, generateACPHeaderKey(''), payload);
         return message.composeRawPacket();
     }
 
     static composeFeatCommand(flags, password, payload) {
-        const message = new Message(0x00030001, flags, 0, 0x1b, 0, generateACPHeaderKey(password), payload);
+        const message = new Message(0x00030001, flags, 0, 0x1b, 0, generateACPHeaderKey(''), payload);
         return message.composeRawPacket();
     }
 
@@ -185,17 +226,17 @@ export default class Message {
     }
 
     composeHeader() {
-        const tmphdr = struct.pack(headerFormat, [
-            headerMagic, this.version,
-            0, this.bodyChecksum, this.bodySize,
-            this.flags, this.unused, this.command, this.errorCode, this.key
-        ]).toString('binary');
+        const tmphdr = this.constructor.packHeader({
+            magic: headerMagic, version: this.version,
+            header_checksum: 0, body_checksum: this.bodyChecksum, body_size: this.bodySize,
+            flags: this.flags, unused: this.unused, command: this.command, error_code: this.errorCode, key: this.key
+        });
 
-        const header = struct.pack(headerFormat, [
-            headerMagic, this.version,
-            adler32.sum(tmphdr), this.bodyChecksum, this.bodySize,
-            this.flags, this.unused, this.command, this.errorCode, this.key
-        ]).toString('binary');
+        const header = this.constructor.packHeader({
+            magic: headerMagic, version: this.version,
+            header_checksum: adler32.sum(tmphdr), body_checksum: this.bodyChecksum, body_size: this.bodySize,
+            flags: this.flags, unused: this.unused, command: this.command, error_code: this.errorCode, key: this.key
+        });
 
         return header;
     }

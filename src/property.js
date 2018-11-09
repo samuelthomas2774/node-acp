@@ -1,8 +1,6 @@
 
 import acpProperties from './properties';
 
-const struct = require('python-struct');
-
 export function generateACPProperties() {
     const props = [];
     for (let prop of acpProperties) {
@@ -18,8 +16,7 @@ export function generateACPProperties() {
 
 export const props = generateACPProperties();
 
-export const elementHeaderFormat = '!4s2I';
-export const elementHeaderSize = struct.sizeOf(elementHeaderFormat);
+export const elementHeaderSize = 12;
 
 export default class Property {
 
@@ -33,7 +30,7 @@ export default class Property {
             throw new Error('Invalid property name passed to Property constructor: ' + name);
 
         if (value) {
-            const propType = this.getPropertyInfoString(name, 'type');
+            const propType = Property.getPropertyInfoString(name, 'type');
             const initHandlerName = `__init_${propType}`;
             if (!this[initHandlerName]) throw new Error(`Missing handler for ${propType} property type`);
             const initHandler = this[initHandlerName];
@@ -60,7 +57,7 @@ export default class Property {
         if (typeof value === 'number') {
             return value;
         } else if (typeof value === 'string') {
-            return parseInt(value);
+            return Buffer.from(value, 'binary').readUInt32BE(0);
         } else {
             throw new Error('Invalid number value: ' + value);
         }
@@ -70,7 +67,7 @@ export default class Property {
         if (typeof value === 'number') {
             return value;
         } else if (typeof value === 'string') {
-            return value;
+            return Buffer.from(value, 'binary').readUInt32BE(0);
         } else {
             throw new Error('Invalid hex value: ' + value);
         }
@@ -134,7 +131,7 @@ export default class Property {
         return props.map(prop => prop.name);
     }
 
-    static getPropertyInfoString(cls, propName, key) {
+    static getPropertyInfoString(propName, key) {
         if (!propName) return;
 
         const prop = props.find(p => p.name === propName);
@@ -159,7 +156,7 @@ export default class Property {
     }
 
     static async parseRawElementHeader(data) {
-        return struct.unpack(elementHeaderFormat, Buffer.from(data, 'binary'));
+        return this.unpackHeader(data);
     }
 
     static composeRawElement(flags, property) {
@@ -167,7 +164,10 @@ export default class Property {
         const value = property.value ? property.value : '\x00\x00\x00\x00';
 
         if (typeof value === 'number') {
-            return this.composeRawElementHeader(name, flags, struct.sizeOf('>I')) + struct.pack('>I', [value]);
+            const buffer = Buffer.alloc(4);
+            buffer.writeUInt32BE(value, 0);
+
+            return this.composeRawElementHeader(name, flags, 4) + buffer.toString('binary');
         } else if (typeof value === 'string') {
             return this.composeRawElementHeader(name, flags, value.length) + value;
         } else {
@@ -177,10 +177,39 @@ export default class Property {
 
     static composeRawElementHeader(name, flags, size) {
         try {
-            return struct.pack(elementHeaderFormat, [name, flags, size]).toString('binary');
+            return this.packHeader({name, flags, size});
         } catch (err) {
             console.error('Error packing', name, flags, size, '- :', err);
         }
+    }
+
+    static packHeader(header_data) {
+        console.log('Packing element header data', header_data);
+        const {name, flags, size} = header_data;
+        const buffer = Buffer.alloc(12);
+
+        buffer.write(name, 0, 4);
+        buffer.writeUInt32BE(flags, 4);
+        buffer.writeUInt32BE(size, 8);
+
+        const packed = buffer.toString('binary');
+        console.log('Packed', packed);
+        return packed;
+    }
+
+    static unpackHeader(header_data) {
+        if (header_data.length !== elementHeaderSize) throw new Error('Header data must be 12 characters');
+
+        console.log('Unpacking element header data', header_data);
+        const buffer = Buffer.from(header_data, 'binary');
+
+        const name = buffer.slice(0, 4).toString();
+        const flags = buffer.readUInt32BE(4);
+        const size = buffer.readUInt32BE(8);
+
+        const unpacked = {name, flags, size};
+        console.log('Unpacked', unpacked);
+        return unpacked;
     }
 
 }
