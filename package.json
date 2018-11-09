@@ -1,14 +1,20 @@
 {
-    "name": "airport",
+    "name": "node-acp",
+    "description": "A Node.js implementation of the management protocol of Apple's AirPort devices.",
     "author": {
         "name": "Samuel Elliott"
     },
     "version": "0.1.0",
+    "homepage": "https://gitlab.fancy.org.uk/samuel/node-acp",
+    "bugs": "https://gitlab.fancy.org.uk/samuel/node-acp/issues",
     "repository": {
         "type": "git",
-        "url": "https://github.com/samuelthomas2774/airpyrt.js"
+        "url": "https://gitlab.fancy.org.uk/samuel/node-acp"
     },
     "main": "dist/client.js",
+    "files": [
+        "dist"
+    ],
     "dependencies": {
         "adler32": "^0.1.7"
     },
