@@ -1,11 +1,12 @@
 
-import acpProperties from './properties';
+import CFLBinaryPList from './cflbinary';
+import acp_properties from './properties';
 
 export function generateACPProperties() {
     const props = [];
 
-    for (let prop of acpProperties) {
-        const [name, type, description, validate] = prop;
+    for (let prop of acp_properties) {
+        const [name, type, description, validator] = prop;
 
         if (name.length !== 4) throw new Error('Bad name in ACP properties list: ' + name);
 
@@ -14,7 +15,7 @@ export function generateACPProperties() {
 
         if (!description) throw new Error('Missing description in ACP properties list for name: ' + name);
 
-        props.push({name, type, description, validate});
+        props.push({name, type, description, validator});
     }
 
     return props;
@@ -22,7 +23,7 @@ export function generateACPProperties() {
 
 export const props = generateACPProperties();
 
-export const elementHeaderSize = 12;
+export const HEADER_SIZE = 12;
 
 export default class Property {
     constructor(name, value) {
@@ -36,19 +37,15 @@ export default class Property {
         }
 
         if (value) {
-            const propType = this.constructor.getPropertyInfoString(name, 'type');
-            const initHandlerName = `__init_${propType}`;
+            const prop_type = this.constructor.getPropertyInfoString(name, 'type');
+            const init_handler_name = `__init_${prop_type}`;
 
-            if (!this[initHandlerName]) throw new Error(`Missing handler for ${propType} property type`);
+            if (!this[init_handler_name]) throw new Error(`Missing handler for ${prop_type} property type`);
 
-            try {
-                value = this[initHandlerName](value);
-            } catch (err) {
-                throw new Error(JSON.stringify(err, null, 4) + ' provided for ' + propType + ' property type ' + value);
-            }
+            value = this[init_handler_name](value);
 
-            const validate = this.constructor.getPropertyInfoString(name, 'validate');
-            if (validate && !validate(value)) {
+            const validator = this.constructor.getPropertyInfoString(name, 'validator');
+            if (validator && !validator(value, name)) {
                 throw new Error('Invalid value passed to validator for property ' + name + ' - type: ' + typeof value);
             }
         }
@@ -61,7 +58,7 @@ export default class Property {
         if (typeof value === 'number') {
             return value;
         } else if (typeof value === 'string') {
-            return Buffer.from(value, 'binary').readUInt32BE(0);
+            return Buffer.from(value, 'binary').readUIntBE(0, value.length);
         } else {
             throw new Error('Invalid number value: ' + value);
         }
@@ -144,24 +141,29 @@ export default class Property {
 
     __format_mac(value) {
         const mac_bytes = [];
+        value = Buffer.from(value, 'binary').toString('hex');
 
         for (let i = 0; i < 6; i++) {
-            mac_bytes.push(value.substr(i, 1));
+            mac_bytes.push(value.substr(i, 2));
         }
 
-        return implode(':', mac_bytes);
+        return mac_bytes.join(':');
     }
 
     __format_bin(value) {
-        return value.toString();
+        return Buffer.from(value, 'binary').toString('hex');
     }
 
     __format_cfb(value) {
-        return value.toString();
+        return CFLBinaryPList.parse(value);
     }
 
     __format_log(value) {
-        return value.toString();
+        return value.split('\x00').map(line => line.trim() + '\n').join('');
+    }
+
+    __format_str(value) {
+        return Buffer.from(value, 'binary').toString('utf8');
     }
 
     toString() {
@@ -192,9 +194,9 @@ export default class Property {
 
     static async parseRawElement(data) {
         // eslint-disable-next-line no-unused-vars
-        const {name, flags, size} = await this.parseRawElementHeader(data.substr(0, elementHeaderSize));
+        const {name, flags, size} = await this.parseRawElementHeader(data.substr(0, HEADER_SIZE));
         // TODO: handle flags
-        return new this(name, data.substr(elementHeaderSize));
+        return new this(name, data.substr(HEADER_SIZE));
     }
 
     static async parseRawElementHeader(data) {
@@ -238,7 +240,7 @@ export default class Property {
     }
 
     static unpackHeader(header_data) {
-        if (header_data.length !== elementHeaderSize) {
+        if (header_data.length !== HEADER_SIZE) {
             throw new Error('Header data must be 12 characters');
         }
 

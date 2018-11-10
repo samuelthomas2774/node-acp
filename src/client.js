@@ -1,8 +1,8 @@
 
 import Session from './session';
-import Message from './message';
-import Property, {elementHeaderSize} from './property';
-// import { CFLBinaryPListParser } from './cflbinary';
+import Message, {HEADER_SIZE as MESSAGE_HEADER_SIZE} from './message';
+import Property, {HEADER_SIZE as ELEMENT_HEADER_SIZE} from './property';
+import CFLBinaryPList from './cflbinary';
 
 export default class Client {
     constructor(host, port, password) {
@@ -30,56 +30,60 @@ export default class Client {
     }
 
     receiveMessageHeader() {
-        return this.receive(Message.headerSize);
+        return this.receive(MESSAGE_HEADER_SIZE);
     }
 
     receivePropertyElementHeader() {
-        return this.receive(elementHeaderSize);
+        return this.receive(ELEMENT_HEADER_SIZE);
     }
 
+    /**
+     * Gets properties from the AirPort device.
+     *
+     * Client: GetProp {...Property}
+     * Server: GetProp
+     * Server: ...Property
+     */
     async getProperties(prop_names) {
         let payload = '';
+
         for (let name of prop_names) {
-            payload += Property.composeRawElement(0, new Property(name));
+            payload += Property.composeRawElement(0, name instanceof Property ? name : new Property(name));
         }
 
         const request = Message.composeGetPropCommand(4, this.password, payload);
         await this.send(request);
 
         const reply = await this.receiveMessageHeader();
-        const replyHeader = await Message.parseRaw(reply);
+        const reply_header = await Message.parseRaw(reply);
 
-        console.debug('Reply:', {
-            reply, replyHeader,
-        });
-
-        if (replyHeader.errorCode !== 0) {
-            console.log('Client.getProperties error code:', replyHeader.errorCode);
-            return [];
+        if (reply_header.error_code !== 0) {
+            throw new Error('Error ' . reply_header.error_code);
         }
 
         const props = [];
 
         while (true) {
-            const propHeader = await this.receivePropertyElementHeader();
-            console.debug('Received property element header:', propHeader);
-            const {name, flags, size} = await Property.parseRawElementHeader(propHeader);
+            const prop_header = await this.receivePropertyElementHeader();
+            console.debug('Received property element header:', prop_header);
+            const data = await Property.parseRawElementHeader(prop_header);
+            console.debug(data);
+            const {name, flags, size} = data;
 
-            const propData = await this.receive(size);
+            const value = await this.receive(size);
 
             if (flags & 1) {
-                const errorCode = Buffer.from(propData, 'binary').readInt32BE(0);
-                console.log('error requesting value for property', name, '-', errorCode);
-                continue;
+                const error_code = Buffer.from(value, 'binary').readInt32BE(0);
+                throw new Error('Error requesting value for property "' + name + '": ' + error_code);
             }
 
-            const prop = new Property(name, propData);
-            console.debug('prop', prop);
+            const prop = new Property(name, value);
 
             if (typeof prop.name === 'undefined' && typeof prop.value === 'undefined') {
-                console.debug('found empty prop end marker');
                 break;
             }
+
+            console.debug('Prop', prop);
 
             props.push(prop);
         }
@@ -97,27 +101,26 @@ export default class Client {
         const request = Message.composeSetPropCommand(0, this.password, payload);
         await this.send(request);
 
-        const rawReply = await this.receiveMessageHeader();
-        const replyHeader = await Message.parseRaw(rawReply);
+        const raw_reply = await this.receiveMessageHeader();
+        const reply_header = await Message.parseRaw(raw_reply);
 
-        if (replyHeader.errorCode !== 0) {
-            console.log('set properties error code', replyHeader.errorCode);
+        if (reply_header.error_code !== 0) {
+            console.log('set properties error code', reply_header.error_code);
             return;
         }
 
-        const propHeader = await this.receivePropertyElementHeader();
-        const {name, flags, size} = await Property.parseRawElementHeader(propHeader);
+        const prop_header = await this.receivePropertyElementHeader();
+        const {name, flags, size} = await Property.parseRawElementHeader(prop_header);
 
-        const propData = await this.receive(size);
+        const value = await this.receive(size);
 
-        if (flags) {
-            const errorCode = Buffer.from(propData, 'binary').readUInt32BE(0);
-            console.log('error setting value for property', name, '-', errorCode);
-            return;
+        if (flags & 1) {
+            const error_code = Buffer.from(value, 'binary').readUInt32BE(0);
+            throw new Error('Error setting value for property "' + name + '": ' + error_code);
         }
 
-        const prop = new Property(name, propData);
-        console.debug('prop', prop);
+        const prop = new Property(name, value);
+        console.debug('Prop', prop);
 
         if (typeof prop.name === 'undefined' && typeof prop.value === 'undefined') {
             console.debug('found empty prop end marker');
@@ -125,15 +128,15 @@ export default class Client {
     }
 
     async getFeatures() {
-        this.send(Message.composeFeatCommand(0));
-        const replyHeader = await Message.parseRaw(this.receiveMessageHeader());
-        const reply = await this.receive(replyHeader.bodySize);
-        return CFLBinaryPListParser.parse(reply);
+        await this.send(Message.composeFeatCommand(0));
+        const reply_header = await Message.parseRaw(await this.receiveMessageHeader());
+        const reply = await this.receive(reply_header.body_size);
+        return CFLBinaryPList.parse(reply);
     }
 
     async flashPrimary(payload) {
         this.send(Message.composeFlashPrimaryCommand(0, this.password, payload));
-        const replyHeader = await Message.parseRaw(this.receiveMessageHeader());
-        return await this.receive(replyHeader.bodySize);
+        const reply_header = await Message.parseRaw(this.receiveMessageHeader());
+        return await this.receive(reply_header.body_size);
     }
 }

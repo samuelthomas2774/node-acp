@@ -1,5 +1,6 @@
 
-// import Encryption from './encryption';
+// import {ClientEncryption, ServerEncryption} from './encryption';
+
 import net from 'net';
 
 export default class Session {
@@ -12,9 +13,7 @@ export default class Session {
         this.buffer = '';
         this.reading = 0;
 
-        this.encryptionContext = undefined;
-        this.encryptionMethod = undefined;
-        this.decryptionMethod = undefined;
+        this.encryption = undefined;
     }
 
     connect(_timeout = 10000) {
@@ -48,6 +47,7 @@ export default class Session {
         if (!this.socket) return;
 
         this.socket.end();
+
         return new Promise((resolve, reject) => {
             this.socket.on('close', resolve);
         });
@@ -56,13 +56,7 @@ export default class Session {
     async sendAndReceive(data, size, timeout = 10000) {
         await this.send(data);
 
-        data = await this.receiveSize(size, timeout);
-
-        if (this.decryptionMethod) {
-            data = this.decryptionMethod(data);
-        }
-
-        return data;
+        return await this.receive(size, timeout);
     }
 
     send(data) {
@@ -70,8 +64,8 @@ export default class Session {
             data = Buffer.from(data, 'binary');
         }
 
-        if (this.encryptionMethod) {
-            data = this.encryptionMethod(data);
+        if (this.encryption) {
+            data = this.encryption.encrypt(data);
         }
 
         if (!this.socket) return;
@@ -143,28 +137,18 @@ export default class Session {
     async receive(size, timeout = 10000) {
         let data = await this.receiveSize(size, timeout);
 
-        if (this.decryptionMethod) {
-            data = this.decryptionMethod(data);
+        if (this.encryption) {
+            data = this.encryption.decrypt(data);
         }
 
         return data;
     }
-}
 
-export class ClientSession extends Session {
     enableEncryption(key, client_iv, server_iv) {
-        this.encryptionContext = new Encryption(key, client_iv, server_iv);
-
-        this.encryptionMethod = this.encryptionContext.clientEncrypt;
-        this.decryptionMethod = this.encryptionContext.serverDecrypt;
+        this.encryption_context = new ClientEncryption(key, client_iv, server_iv);
     }
-}
 
-export class ServerSession extends Session {
-    enableEncryption(key, client_iv, server_iv) {
-        this.encryptionContext = new Encryption(key, client_iv, server_iv);
-
-        this.encryptionMethod = this.encryptionContext.serverEncrypt;
-        this.decryptionMethod = this.encryptionContext.clientDecrypt;
+    enableServerEncryption(key, client_iv, server_iv) {
+        this.encryption_context = new ServerEncryption(key, client_iv, server_iv);
     }
 }
