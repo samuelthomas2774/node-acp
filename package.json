@@ -12,11 +12,15 @@
         "url": "https://gitlab.fancy.org.uk/samuel/node-acp"
     },
     "main": "dist/client.js",
+    "bin": {
+        "acp": "bin/acp.js"
+    },
     "files": [
         "dist"
     ],
     "dependencies": {
-        "adler32": "^0.1.7"
+        "adler32": "^0.1.7",
+        "yargs": "^12.0.2"
     },
     "devDependencies": {
         "babel-core": "^6.26.3",

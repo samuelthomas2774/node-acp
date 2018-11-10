@@ -89,13 +89,13 @@ export default class Client {
 
     async setProperties(props) {
         let payload = '';
-        for (let {prop} of props) {
-            console.debug('prop', prop);
+
+        for (let prop of props) {
             payload += Property.composeRawElement(0, prop);
         }
 
         const request = Message.composeSetPropCommand(0, this.password, payload);
-        this.send(request);
+        await this.send(request);
 
         const rawReply = await this.receiveMessageHeader();
         const replyHeader = await Message.parseRaw(rawReply);
