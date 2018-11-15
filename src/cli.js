@@ -5,6 +5,7 @@ import Server from './server';
 import Property from './property';
 
 import yargs from 'yargs';
+import bonjour from 'bonjour';
 
 yargs.demandCommand();
 yargs.help();
@@ -12,7 +13,6 @@ yargs.help();
 yargs.option('host', {
     alias: 'h',
     describe: 'The hostname/IP address of the AirPort device to connect to',
-    default: 'airport-base-station.local',
 });
 yargs.option('port', {
     describe: 'The port of the AirPort device\'s acp daemon (you should only need to change this when you need to use port forwarding to access the device)',
@@ -25,10 +25,28 @@ yargs.option('password', {
 
 yargs.command('version', 'Shows the node-acp version', () => {}, argv => {
     console.log('node-acp v' + require('../package').version);
+    console.log('https://gitlab.fancy.org.uk/samuel/node-acp');
 });
 
-yargs.command('server', 'Start the ACP server', yargs => {}, async argv => {
-    const server = new Server(argv.host, argv.port, argv.password);
+yargs.command('server', 'Start the ACP server', yargs => {
+    yargs.option('advertise', {
+        describe: 'Whether to advertise the ACP server with DNS SD',
+        boolean: true,
+    });
+    yargs.option('advertise-name', {
+        describe: 'The name to advertise the service as',
+        default: 'node-acp',
+    });
+    yargs.option('advertise-network', {
+        describe: 'The network name to advertise',
+        default: 'node-acp',
+    });
+    yargs.option('advertise-address', {
+        describe: 'The MAC address to advertise',
+        default: '00-00-00-00-00-00',
+    });
+}, async argv => {
+    const server = new Server(argv.host || '::', argv.port, argv.password);
 
     try {
         await server.listen();
@@ -37,10 +55,36 @@ yargs.command('server', 'Start the ACP server', yargs => {}, async argv => {
     }
 
     // Leave the server to run
+
+    if (argv.advertise) {
+        const service = bonjour().publish({
+            name: argv['advertise-name'],
+            port: argv.port,
+            type: 'airport',
+            txt: {waMA: '00-00-00-00-00-00,' + Object.entries({
+                // waMA: '00-00-00-00-00-00', // Ethernet MAC address
+                raMA: argv['advertise-address'], // 5 GHz Wi-Fi MAC address - this is used to identify devices in AirPort Utility
+                raM2: '00-00-00-00-00-00', // 2.4 GHz Wi-Fi MAC address
+                raNm: argv['advertise-network'], // Network
+                raCh: 1, // 2.4 GHz channel
+                rCh2: 36, // 5 GHz channel
+                raSt: 0, // ?
+                raNA: 0, // ?
+                syFl: '0x820C', // ?
+                syAP: 115, // Model?
+                syVs: '7.8', // Version
+                srcv: '78000.12', // Build
+                bjSd: 43, // ?
+                // prob: '',
+            }).map(([k, v]) => `${k}=${v}`).join(',')},
+        });
+
+        console.log('Advertising service', service);
+    }
 });
 
 const commandHandler = handler => async argv => {
-    const client = new Client(argv.host, argv.port, argv.password);
+    const client = new Client(argv.host || 'airport-base-station.local', argv.port, argv.password);
 
     try {
         await client.connect();

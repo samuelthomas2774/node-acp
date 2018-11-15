@@ -54,6 +54,8 @@ export default class Server {
         const session = new Session(socket.remoteAddress, socket.remotePort, this.password);
         session.socket = socket;
 
+        console.log('New connection from', session.host, session.port);
+
         socket.on('data', data => {
             console.debug(0, 'Receiving data', data, 'on connection', session.host + ' port ' + session.port);
             if (session.reading) return;
