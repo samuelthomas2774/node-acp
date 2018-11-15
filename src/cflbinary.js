@@ -77,7 +77,7 @@ export class CFLBinaryPListComposer {
 
                 try {
                     const buffer = Buffer.alloc(size);
-                    buffer.writeIntBE(object, 0, size);
+                    buffer.writeUIntBE(object, 0, size);
 
                     string = buffer.toString('binary');
                     break;
@@ -308,17 +308,7 @@ class CFLBinaryPListParser {
         const int_bytes = data.substr(0, int_size);
         data = data.substr(int_size);
 
-        if (int_size === 1) {
-            return [Buffer.from(int_bytes, 'binary').readInt8(0), data];
-        } else if (int_size === 2) {
-            return [Buffer.from(int_bytes, 'binary').readInt16BE(0), data];
-        } else if (int_size === 4) {
-            return [Buffer.from(int_bytes, 'binary').readInt32BE(0), data];
-        } else if (int_size === 8) {
-            return [Buffer.from(int_bytes, 'binary').readIntBE(0), data, 8];
-        }
-
-        throw new Error('Unsupported int packed object size of ' + int_size + ' bytes');
+        return [Buffer.from(int_bytes, 'binary').readUIntBE(0, int_size), data];
     }
 
     /**
