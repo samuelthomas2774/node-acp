@@ -98,6 +98,12 @@ const commandHandler = handler => async argv => {
     process.exit();
 };
 
+yargs.command('authenticate', 'Authenticate', yargs => {}, commandHandler(async (client, argv) => {
+    const data = await client.authenticate();
+
+    console.log(data);
+}));
+
 yargs.command('getprop <prop>', 'Get an ACP property', yargs => {
     yargs.positional('prop', {
         describe: 'The name of the ACP property',

@@ -160,63 +160,51 @@ export default class Message {
     }
 
     static composeEchoCommand(flags, password, payload) {
-        const message = new Message(0x00030001, flags, 0, 1, 0, generateACPHeaderKey(password), payload);
-        return message.composeRawPacket();
+        return new Message(0x00030001, flags, 0, 1, 0, generateACPHeaderKey(password), payload);
     }
 
     static composeFlashPrimaryCommand(flags, password, payload) {
-        const message = new Message(0x00030001, flags, 0, 3, 0, generateACPHeaderKey(password), payload);
-        return message.composeRawPacket();
+        return new Message(0x00030001, flags, 0, 3, 0, generateACPHeaderKey(password), payload);
     }
 
     static composeFlashSecondaryCommand(flags, password, payload) {
-        const message = new Message(0x00030001, flags, 0, 5, 0, generateACPHeaderKey(password), payload);
-        return message.composeRawPacket();
+        return new Message(0x00030001, flags, 0, 5, 0, generateACPHeaderKey(password), payload);
     }
 
     static composeFlashBootloaderCommand(flags, password, payload) {
-        const message = new Message(0x00030001, flags, 0, 6, 0, generateACPHeaderKey(password), payload);
-        return message.composeRawPacket();
+        return new Message(0x00030001, flags, 0, 6, 0, generateACPHeaderKey(password), payload);
     }
 
     static composeGetPropCommand(flags, password, payload) {
-        const message = new Message(0x00030001, flags, 0, 0x14, 0, generateACPHeaderKey(password), payload);
-        return message.composeRawPacket();
+        return new Message(0x00030001, flags, 0, 0x14, 0, generateACPHeaderKey(password), payload);
     }
 
     static composeSetPropCommand(flags, password, payload) {
-        const message = new Message(0x00030001, flags, 0, 0x15, 0, generateACPHeaderKey(password), payload);
-        return message.composeRawPacket();
+        return new Message(0x00030001, flags, 0, 0x15, 0, generateACPHeaderKey(password), payload);
     }
 
     static composePerformCommand(flags, password, payload) {
-        const message = new Message(0x00030001, flags, 0, 0x16, 0, generateACPHeaderKey(password), payload);
-        return message.composeRawPacket();
+        return new Message(0x00030001, flags, 0, 0x16, 0, generateACPHeaderKey(password), payload);
     }
 
     static composeMonitorCommand(flags, password, payload) {
-        const message = new Message(0x00030001, flags, 0, 0x18, 0, generateACPHeaderKey(password), payload);
-        return message.composeRawPacket();
+        return new Message(0x00030001, flags, 0, 0x18, 0, generateACPHeaderKey(password), payload);
     }
 
     static composeRPCCommand(flags, password, payload) {
-        const message = new Message(0x00030001, flags, 0, 0x19, 0, generateACPHeaderKey(password), payload);
-        return message.composeRawPacket();
+        return new Message(0x00030001, flags, 0, 0x19, 0, generateACPHeaderKey(password), payload);
     }
 
     static composeAuthCommand(flags, password, payload) {
-        const message = new Message(0x00030001, flags, 0, 0x1a, 0, generateACPHeaderKey(password), payload);
-        return message.composeRawPacket();
+        return new Message(0x00030001, flags, 0, 0x1a, 0, generateACPHeaderKey(password), payload);
     }
 
     static composeFeatCommand(flags, payload) {
-        const message = new Message(0x00030001, flags, 0, 0x1b, 0, generateACPHeaderKey(''), payload);
-        return message.composeRawPacket();
+        return new Message(0x00030001, flags, 0, 0x1b, 0, generateACPHeaderKey(''), payload);
     }
 
     static composeMessageEx(version, flags, unused, command, error_code, password, payload, payload_size) {
-        const message = new Message(version, flags, unused, command, error_code, generateACPHeaderKey(password), payload, payload_size);
-        return message.composeRawPacket();
+        return new Message(version, flags, unused, command, error_code, generateACPHeaderKey(password), payload, payload_size);
     }
 
     composeRawPacket() {

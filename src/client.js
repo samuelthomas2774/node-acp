@@ -139,4 +139,24 @@ export default class Client {
         const reply_header = await Message.parseRaw(this.receiveMessageHeader());
         return await this.receive(reply_header.body_size);
     }
+
+    async authenticate() {
+        let payload = {
+            state: 1,
+            username: 'admin',
+        };
+
+        const message = Message.composeAuthCommand(4, this.password, CFLBinaryPList.compose(payload));
+        await this.send(message);
+
+        const response = await this.session.receiveMessage();
+        const data = CFLBinaryPList.parse(response.body);
+
+        if (response.error_code !== 0) {
+            console.log('Authenticate error code', response.error_code);
+            return;
+        }
+
+        return data;
+    }
 }

@@ -81,6 +81,10 @@ export default class Session {
     }
 
     send(data) {
+        if (data instanceof Message) {
+            data = data.composeRawPacket();
+        }
+
         if (!Buffer.isBuffer(data)) {
             data = Buffer.from(data, 'binary');
         }
