@@ -103,13 +103,13 @@ export default class Message {
         return buffer.toString('binary');
     }
 
-    static async parseRaw(data) {
+    static async parseRaw(data, return_remaining) {
         if (HEADER_SIZE > data.length) {
             throw new Error(`Need to pass at least ${HEADER_SIZE} bytes`);
         }
 
         const header_data = data.substr(0, HEADER_SIZE);
-        const body_data = data.length > HEADER_SIZE ? data.substr(HEADER_SIZE) : undefined;
+        let body_data = data.length > HEADER_SIZE ? data.substr(HEADER_SIZE) : undefined;
 
         const {magic, version, header_checksum, body_checksum, body_size, flags, unused, command, error_code, key, pad1, pad2} = this.unpackHeader(header_data);
 
@@ -134,6 +134,10 @@ export default class Message {
             throw new Error('Header checksum does not match');
         }
 
+        if (body_data && return_remaining) {
+            body_data = body_data.substr(0, body_size);
+        }
+
         if (body_data && body_size === -1) {
             throw new Error('Cannot handle stream header with data attached');
         }
@@ -156,7 +160,11 @@ export default class Message {
 
         // TODO: check error code
 
-        return new Message(version, flags, unused, command, error_code, key, body_data, body_size);
+        const message = new Message(version, flags, unused, command, error_code, key, body_data, body_size);
+
+        if (return_remaining) return [message, data.substr(HEADER_SIZE + body_size)];
+
+        return message;
     }
 
     static composeEchoCommand(flags, password, payload) {

@@ -54,6 +54,7 @@ export class CFLBinaryPListComposer {
                     buffer['write' + sizes[size]](object, 0, size);
 
                     string = buffer.toString('binary');
+                    break;
                 } catch (err) {
                     size = null;
                 }
@@ -68,7 +69,6 @@ export class CFLBinaryPListComposer {
             data += String.fromCharCode(marker);
             data += string;
         } else if (typeof object === 'number') {
-
             let string = '', size = null;
 
             const sizes = {1: '8', 2: '16BE', 4: '32BE'};
@@ -96,13 +96,13 @@ export class CFLBinaryPListComposer {
             data += string;
         } else if (typeof object === 'object' && object instanceof Buffer) {
             if (object.length >= 0xf) {
-                data += String.fromCharCode(0xf);
+                data += String.fromCharCode(0x4f);
                 data += this.packObject(object.length, depth + 1);
             } else {
                 data += String.fromCharCode(0x40 + object.length);
             }
 
-            data += object;
+            data += object.toString('binary');
         } else if (typeof object === 'string') {
 			data += '\x70';
 			data += Buffer.from(object, 'utf8').toString('binary');

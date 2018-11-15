@@ -63,15 +63,21 @@ export default class Server {
             session.buffer += data.toString('binary');
 
             // Try decoding the data as a message
-            if (session.buffer.length >= MESSAGE_HEADER_SIZE) {
-                this.tryHandleMessage(session);
-            }
+            this.handleData(session);
         });
     }
 
-    async tryHandleMessage(session, buffer) {
+    async handleData(session) {
+        while (session.buffer.length >= MESSAGE_HEADER_SIZE) {
+            await this.tryHandleMessage(session);
+        }
+    }
+
+    async tryHandleMessage(session) {
         try {
-            const message = await Message.parseRaw(session.buffer);
+            const [message, data] = await Message.parseRaw(session.buffer, true);
+
+            session.buffer = data;
 
             if (message.body.length !== message.body_size) {
                 // Haven't received the message body yet
@@ -82,7 +88,7 @@ export default class Server {
 
             this.handleMessage(session, message);
         } catch (err) {
-            console.error(session, err);
+            console.error('Error handling message from', session.host, session.port, err);
         }
     }
 
