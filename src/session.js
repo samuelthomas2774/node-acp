@@ -1,4 +1,6 @@
 
+import Message, {HEADER_SIZE as MESSAGE_HEADER_SIZE} from './message';
+import Property, {HEADER_SIZE as ELEMENT_HEADER_SIZE} from './property';
 // import {ClientEncryption, ServerEncryption} from './encryption';
 
 import net from 'net';
@@ -51,6 +53,25 @@ export default class Session {
         return new Promise((resolve, reject) => {
             this.socket.on('close', resolve);
         });
+    }
+
+    async receiveMessage(timeout) {
+        const raw_header = await this.receiveMessageHeader(timeout);
+        const message = await Message.parseRaw(raw_header);
+
+        const data = await this.receive(message.body_size);
+
+        message.body = data;
+
+        return message;
+    }
+
+    receiveMessageHeader(timeout) {
+        return this.receive(MESSAGE_HEADER_SIZE, timeout);
+    }
+
+    receivePropertyElementHeader(timeout) {
+        return this.receive(ELEMENT_HEADER_SIZE, timeout);
     }
 
     async sendAndReceive(data, size, timeout = 10000) {

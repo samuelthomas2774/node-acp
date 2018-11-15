@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import Client from './client';
+import Server from './server';
 import Property from './property';
 
 import yargs from 'yargs';
@@ -26,13 +27,17 @@ yargs.command('version', 'Shows the node-acp version', () => {}, argv => {
     console.log('node-acp v' + require('../package').version);
 });
 
-async function getClient(argv) {
-    const client = new Client(argv.host, argv.port, argv.password);
+yargs.command('server', 'Start the ACP server', yargs => {}, async argv => {
+    const server = new Server(argv.host, argv.port, argv.password);
 
-    await client.connect();
+    try {
+        await server.listen();
+    } catch (err) {
+        console.error(err);
+    }
 
-    return client;
-}
+    // Leave the server to run
+});
 
 const commandHandler = handler => async argv => {
     const client = new Client(argv.host, argv.port, argv.password);

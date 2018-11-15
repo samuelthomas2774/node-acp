@@ -70,7 +70,7 @@ export default class Message {
         const magic = buffer.slice(0, 4).toString();
         const version = buffer.readInt32BE(4);
         const header_checksum = buffer.readUInt32BE(8);
-        const body_checksum = buffer.readInt32BE(12);
+        const body_checksum = buffer.readUInt32BE(12);
         const body_size = buffer.readInt32BE(16);
         const flags = buffer.readInt32BE(20);
         const unused = buffer.readInt32BE(24);
@@ -90,7 +90,7 @@ export default class Message {
         buffer.write(magic, 0, 4);
         buffer.writeInt32BE(version, 4);
         buffer.writeUInt32BE(header_checksum, 8);
-        buffer.writeInt32BE(body_checksum, 12);
+        buffer.writeUInt32BE(body_checksum, 12);
         buffer.writeInt32BE(body_size, 16);
         buffer.writeInt32BE(flags, 20);
         buffer.writeInt32BE(unused, 24);
@@ -204,8 +204,8 @@ export default class Message {
         return message.composeRawPacket();
     }
 
-    static composeAuthCommand(flags, payload) {
-        const message = new Message(0x00030001, flags, 0, 0x1a, 0, generateACPHeaderKey(''), payload);
+    static composeAuthCommand(flags, password, payload) {
+        const message = new Message(0x00030001, flags, 0, 0x1a, 0, generateACPHeaderKey(password), payload);
         return message.composeRawPacket();
     }
 

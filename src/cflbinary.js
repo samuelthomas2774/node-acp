@@ -355,7 +355,7 @@ class CFLBinaryPListParser {
                 throw new Error('Expected count to be a packed int object');
             }
 
-            return this.unpackInt(count_object_type, data);
+            return this.unpackInt(count_object_info, data);
         }
 
         return [object_info, data];
