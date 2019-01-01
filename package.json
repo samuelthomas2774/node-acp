@@ -16,7 +16,8 @@
         "acp": "bin/acp.js"
     },
     "files": [
-        "dist"
+        "dist",
+        "bin"
     ],
     "dependencies": {
         "adler32": "^0.1.7",
