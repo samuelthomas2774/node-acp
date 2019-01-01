@@ -143,7 +143,7 @@ export class CFLBinaryPListComposer {
     }
 }
 
-class CFLBinaryPListParser {
+export class CFLBinaryPListParser {
     /**
      * Parse plist data into equivalent JavaScript built in.
      *

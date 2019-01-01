@@ -25,3 +25,14 @@ test:
 lint:
     script:
         - npx eslint src test tests
+
+publish:
+    script:
+        - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+        - npm publish
+    dependencies:
+        - build
+    only:
+        - /^v.*$/
+    except:
+        - branches
