@@ -5,6 +5,14 @@ import Property, {HEADER_SIZE as ELEMENT_HEADER_SIZE} from './property';
 import CFLBinaryPList from './cflbinary';
 
 export default class Client {
+    /**
+     * Creates an ACP Client.
+     *
+     * @param {string} host
+     * @param {number} port
+     * @param {string} password
+     * @return {undefined}
+     */
     constructor(host, port, password) {
         this.host = host;
         this.port = port;
@@ -13,26 +21,59 @@ export default class Client {
         this.session = new Session(host, port, password);
     }
 
+    /**
+     * Connects to the ACP server.
+     *
+     * @param {number} timeout
+     * @return {Promise}
+     */
     connect(timeout) {
         return this.session.connect(timeout);
     }
 
+    /**
+     * Disconnects from the ACP server.
+     *
+     * @return {Promise}
+     */
     disconnect() {
         return this.session.close();
     }
 
+    /**
+     * Sends a Message to the ACP server.
+     *
+     * @param {Message|Buffer|string} data
+     * @return {Promise}
+     */
     send(data) {
         return this.session.send(data);
     }
 
+    /**
+     * Receives data from the ACP server.
+     *
+     * @param {number} size
+     * @return {Promise<string>}
+     */
     receive(size) {
         return this.session.receive(size);
     }
 
+    /**
+     * Receives a message header from the ACP server.
+     *
+     * @return {Promise<string>}
+     */
     receiveMessageHeader() {
         return this.receive(MESSAGE_HEADER_SIZE);
     }
 
+    /**
+     * Receives a property element header from the ACP server.
+     *
+     * @return {Promise<string>}
+     */
     receivePropertyElementHeader() {
         return this.receive(ELEMENT_HEADER_SIZE);
     }
@@ -43,11 +84,14 @@ export default class Client {
      * Client: GetProp {...Property}
      * Server: GetProp
      * Server: ...Property
+     *
+     * @param {Array} props
+     * @return {Array}
      */
-    async getProperties(prop_names) {
+    async getProperties(props) {
         let payload = '';
 
-        for (let name of prop_names) {
+        for (let name of props) {
             payload += Property.composeRawElement(0, name instanceof Property ? name : new Property(name));
         }
 
@@ -61,7 +105,7 @@ export default class Client {
             throw new Error('Error ' . reply_header.error_code);
         }
 
-        const props = [];
+        const props_with_values = [];
 
         while (true) {
             const prop_header = await this.receivePropertyElementHeader();
@@ -85,12 +129,18 @@ export default class Client {
 
             console.debug('Prop', prop);
 
-            props.push(prop);
+            props_with_values.push(prop);
         }
 
-        return props;
+        return props_with_values;
     }
 
+    /**
+     * Sets properties on the AirPort device.
+     *
+     * @param {Array} props
+     * @return {undefined}
+     */
     async setProperties(props) {
         let payload = '';
 
@@ -127,6 +177,11 @@ export default class Client {
         }
     }
 
+    /**
+     * Gets the supported features on the AirPort device.
+     *
+     * @return {Array}
+     */
     async getFeatures() {
         await this.send(Message.composeFeatCommand(0));
         const reply_header = await Message.parseRaw(await this.receiveMessageHeader());

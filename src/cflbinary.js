@@ -5,10 +5,22 @@ export const HEADER_SIZE = HEADER_MAGIC.length;
 export const FOOTER_SIZE = FOOTER_MAGIC.length;
 
 export default class CFLBinaryPList {
+    /**
+     * Compose JavaScript object into equivalent plist.
+     *
+     * @param {*} object
+     * @return {string} data
+     */
     static compose(object) {
         return CFLBinaryPListComposer.compose(object);
     }
 
+    /**
+     * Parse plist data into equivalent JavaScript built in.
+     *
+     * @param {string} data
+     * @return {*}
+     */
     static parse(data) {
         return CFLBinaryPListParser.parse(data);
     }
@@ -18,7 +30,8 @@ export class CFLBinaryPListComposer {
     /**
      * Compose JavaScript object into equivalent plist.
      *
-     * @return string data
+     * @param {*} object
+     * @return {string} data
      */
     static compose(object) {
         let data = HEADER_MAGIC;
@@ -33,7 +46,9 @@ export class CFLBinaryPListComposer {
     /**
      * Pack a supported JavaScript built in object.
      *
-     * @return string data
+     * @param {*} object
+     * @param {number} depth
+     * @return {string} data
      */
     static packObject(object, depth = 1) {
         let data = '';
@@ -43,7 +58,8 @@ export class CFLBinaryPListComposer {
         } else if (typeof object === 'boolean') {
             data += object ? '\x09' : '\x08';
         } else if (typeof object === 'number' && object % 1 !== 0) {
-            let string = '', size = null;
+            let string = '';
+            let size = null;
 
             const sizes = {4: 'FloatBE', 8: 'DoubleBE'};
             for (size of Object.keys(sizes)) {
@@ -69,7 +85,8 @@ export class CFLBinaryPListComposer {
             data += String.fromCharCode(marker);
             data += string;
         } else if (typeof object === 'number') {
-            let string = '', size = null;
+            let string = '';
+            let size = null;
 
             const sizes = {1: '8', 2: '16BE', 4: '32BE'};
             for (size of Object.keys(sizes)) {
@@ -104,8 +121,8 @@ export class CFLBinaryPListComposer {
 
             data += object.toString('binary');
         } else if (typeof object === 'string') {
-			data += '\x70';
-			data += Buffer.from(object, 'utf8').toString('binary');
+            data += '\x70';
+            data += Buffer.from(object, 'utf8').toString('binary');
             data += '\x00';
         } else if (typeof object === 'object' && object instanceof Array || object instanceof Set) {
             data += '\xa0';
@@ -147,7 +164,8 @@ export class CFLBinaryPListParser {
     /**
      * Parse plist data into equivalent JavaScript built in.
      *
-     * @return any
+     * @param {string} data
+     * @return {*}
      */
     static parse(data) {
         if (data.length < HEADER_SIZE + FOOTER_SIZE + 1) {
@@ -175,14 +193,17 @@ export class CFLBinaryPListParser {
     /**
      * Unpack an object from the provided data.
      *
-     * @return array
+     * @param {string} data
+     * @param {number} depth
+     * @return {Array}
      */
     static unpackObject(data, depth = 1) {
         if (depth > 10) {
             throw new Error('Max depth reached');
         }
 
-        let object = null, marker;
+        // let object = null;
+        let marker;
 
         [marker, data] = this.unpackObjectMarker(data);
         const object_type = marker & 0xf0;
@@ -269,7 +290,8 @@ export class CFLBinaryPListParser {
             const object = {};
 
             while (true) {
-                let key, value;
+                let key;
+                let value;
                 [key, data] = this.unpackObject(data, depth + 1);
 
                 if (key === null) break;
@@ -288,7 +310,8 @@ export class CFLBinaryPListParser {
     /**
      * Unpack an object marker from the provided data.
      *
-     * @return array
+     * @param {string} data
+     * @return {Array}
      */
     static unpackObjectMarker(data) {
         const marker_byte = data.substr(0, 1);
@@ -301,7 +324,9 @@ export class CFLBinaryPListParser {
     /**
      * Unpack an int object as a JavaScript number from the provided data.
      *
-     * @return array
+     * @param {number} size_exponent
+     * @param {string} data
+     * @return {Array}
      */
     static unpackInt(size_exponent, data) {
         const int_size = 2 ** size_exponent;
@@ -314,7 +339,9 @@ export class CFLBinaryPListParser {
     /**
      * Unpack a real object as a JavaScript number from the provided data.
      *
-     * @return array
+     * @param {number} size_exponent
+     * @param {string} data
+     * @return {Array}
      */
     static unpackReal(size_exponent, data) {
         const real_size = 2 ** size_exponent;
@@ -333,7 +360,9 @@ export class CFLBinaryPListParser {
     /**
      * Unpack count from object info nibble and/or packed int value.
      *
-     * @return array
+     * @param {number} object_info
+     * @param {string} data
+     * @return {Array}
      */
     static unpackCount(object_info, data) {
         if (object_info === 0x0f) {

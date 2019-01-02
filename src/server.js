@@ -2,7 +2,7 @@
 import Session from './session';
 import Message, {HEADER_SIZE as MESSAGE_HEADER_SIZE} from './message';
 import Property, {HEADER_SIZE as ELEMENT_HEADER_SIZE} from './property';
-import CFLBinaryPList from './cflbinary';
+// import CFLBinaryPList from './cflbinary';
 
 import net from 'net';
 
@@ -96,44 +96,46 @@ export default class Server {
         console.log('Received message', message);
 
         switch (message.command) {
-            // Get prop
-            case 0x14: {
-                let data = message.body;
-                const props = [];
+        // Get prop
+        case 0x14: {
+            let data = message.body;
+            const props = [];
 
-                // Read the requested props into an array of Propertys
-                while (data.length) {
-                    const prop_header = data.substr(0, ELEMENT_HEADER_SIZE);
-                    const prop_data = await Property.parseRawElementHeader(prop_header);
-                    console.debug(prop_data);
-                    const {name, flags, size} = prop_data;
+            // Read the requested props into an array of Propertys
+            while (data.length) {
+                const prop_header = data.substr(0, ELEMENT_HEADER_SIZE);
+                const prop_data = await Property.parseRawElementHeader(prop_header);
+                console.debug(prop_data);
+                const {name, size} = prop_data;
 
-                    const value = data.substr(0, ELEMENT_HEADER_SIZE + size);
-                    data = data.substr(ELEMENT_HEADER_SIZE + size);
+                const value = data.substr(0, ELEMENT_HEADER_SIZE + size);
+                data = data.substr(ELEMENT_HEADER_SIZE + size);
 
-                    const prop = new Property(name, value);
+                const prop = new Property(name, value);
 
-                    if (typeof prop.name === 'undefined' && typeof prop.value === 'undefined') {
-                        break;
-                    }
-
-                    props.push(prop);
+                if (typeof prop.name === 'undefined' && typeof prop.value === 'undefined') {
+                    break;
                 }
 
-                // Send back an array of Propertys
-                const ret = this.getProperties(props);
-
-                let payload = '', i = 0;
-
-                for (let prop of ret) {
-                    payload += Property.composeRawElement(0, prop instanceof Property ? prop : new Property(props[i], prop));
-                    i++;
-                }
-
-                const response = Message.composeGetPropCommand(4, this.password, payload);
-
-                return;
+                props.push(prop);
             }
+
+            // Send back an array of Propertys
+            const ret = this.getProperties(props);
+
+            let payload = '';
+            let i = 0;
+
+            for (let prop of ret) {
+                payload += Property.composeRawElement(0, prop instanceof Property ? prop : new Property(props[i], prop));
+                i++;
+            }
+
+            // eslint-disable-next-line no-unused-vars
+            const response = Message.composeGetPropCommand(4, this.password, payload);
+
+            return;
+        }
         }
     }
 

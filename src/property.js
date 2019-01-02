@@ -26,6 +26,13 @@ export const props = generateACPProperties();
 export const HEADER_SIZE = 12;
 
 export default class Property {
+    /**
+     * Creates a Property.
+     *
+     * @param {string} name
+     * @param {string} value
+     * @return {undefined}
+     */
     constructor(name, value) {
         if (name === '\x00\x00\x00\x00' && value === '\x00\x00\x00\x00') {
             name = undefined;
@@ -120,6 +127,11 @@ export default class Property {
         }
     }
 
+    /**
+     * Convert the property's value to a JavaScript built in type.
+     *
+     * @return {*}
+     */
     format() {
         if (!this.name || !this.value) return '';
 
@@ -167,9 +179,14 @@ export default class Property {
     }
 
     toString() {
-        return this.format();
+        return JSON.stringify(this.format());
     }
 
+    /**
+     * Returns the names of known properties.
+     *
+     * @return {Array}
+     */
     static getSupportedPropertyNames() {
         return props.map(prop => prop.name);
     }
@@ -192,17 +209,27 @@ export default class Property {
         return prop[key];
     }
 
-    static async parseRawElement(data) {
+    /**
+     * Parses an ACP property.
+     *
+     * @param {string} data
+     * @return {Property}
+     */
+    static parseRawElement(data) {
         // eslint-disable-next-line no-unused-vars
-        const {name, flags, size} = await this.parseRawElementHeader(data.substr(0, HEADER_SIZE));
+        const {name, flags, size} = this.unpackHeader(data.substr(0, HEADER_SIZE));
+
         // TODO: handle flags
         return new this(name, data.substr(HEADER_SIZE));
     }
 
-    static async parseRawElementHeader(data) {
-        return this.unpackHeader(data);
-    }
-
+    /**
+     * Composes an ACP property.
+     *
+     * @param {number} flags
+     * @param {Property} property
+     * @return {string}
+     */
     static composeRawElement(flags, property) {
         const name = property.name ? property.name : '\x00\x00\x00\x00';
         const value = property.value ? property.value : '\x00\x00\x00\x00';
@@ -228,6 +255,12 @@ export default class Property {
         }
     }
 
+    /**
+     * Packs an ACP property header.
+     *
+     * @param {object} header_data
+     * @return {string}
+     */
     static packHeader(header_data) {
         const {name, flags, size} = header_data;
         const buffer = Buffer.alloc(12);
@@ -239,6 +272,12 @@ export default class Property {
         return buffer.toString('binary');
     }
 
+    /**
+     * Unpacks an ACP property header.
+     *
+     * @param {string} header_data
+     * @return {object}
+     */
     static unpackHeader(header_data) {
         if (header_data.length !== HEADER_SIZE) {
             throw new Error('Header data must be 12 characters');

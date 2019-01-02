@@ -126,4 +126,11 @@ yargs.command('setprop <prop> <value>', 'Set an ACP property', yargs => {
     console.log(props);
 }));
 
+yargs.command('features', 'Get supported features', yargs => {}, commandHandler(async (client, argv) => {
+    const features = await client.getFeatures();
+
+    console.log(features);
+}));
+
+// eslint-disable-next-line no-unused-vars
 const argv = yargs.argv;

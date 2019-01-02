@@ -9,7 +9,7 @@ const object = CFLBinaryPList.parse(plist.toString('binary'));
 console.log(object);
 
 const object2 = {something: {lol: ['i', 'd', 'k']},
-brillant: [1, 2, 3, 4, 5, 0x10000000]};
+    brillant: [1, 2, 3, 4, 5, 0x10000000]};
 const plist2 = CFLBinaryPList.compose(object2);
 
 console.log(object2, plist2);

@@ -1,11 +1,19 @@
 
 import Message, {HEADER_SIZE as MESSAGE_HEADER_SIZE} from './message';
-import Property, {HEADER_SIZE as ELEMENT_HEADER_SIZE} from './property';
+import {HEADER_SIZE as ELEMENT_HEADER_SIZE} from './property';
 // import {ClientEncryption, ServerEncryption} from './encryption';
 
 import net from 'net';
 
 export default class Session {
+    /**
+     * Creates a Session.
+     *
+     * @param {string} host
+     * @param {number} port
+     * @param {string} password
+     * @return {undefined}
+     */
     constructor(host, port, password) {
         this.host = host;
         this.port = port;
@@ -18,14 +26,20 @@ export default class Session {
         this.encryption = undefined;
     }
 
-    connect(_timeout = 10000) {
+    /**
+     * Connects to the ACP server.
+     *
+     * @param {number} timeout
+     * @return {Promise}
+     */
+    connect(timeout = 10000) {
         return new Promise((resolve, reject) => {
             this.socket = new net.Socket();
 
             setTimeout(() => {
                 this.reading -= 1;
                 reject('Timeout');
-            }, _timeout);
+            }, timeout);
 
             this.socket.connect(this.port, this.host, err => {
                 console.log('Connected', err);
@@ -45,16 +59,30 @@ export default class Session {
         });
     }
 
+    /**
+     * Disconnects from the ACP server.
+     *
+     * @return {Promise}
+     */
     close() {
         if (!this.socket) return;
 
         this.socket.end();
 
         return new Promise((resolve, reject) => {
-            this.socket.on('close', resolve);
+            this.socket.on('close', () => {
+                this.socket = undefined;
+                resolve();
+            });
         });
     }
 
+    /**
+     * Receives and parses a Message from the ACP server.
+     *
+     * @param {number} timeout
+     * @return {Promise<Message>}
+     */
     async receiveMessage(timeout) {
         const raw_header = await this.receiveMessageHeader(timeout);
         const message = await Message.parseRaw(raw_header);
@@ -66,20 +94,46 @@ export default class Session {
         return message;
     }
 
+    /**
+     * Receives a message header from the ACP server.
+     *
+     * @param {number} timeout
+     * @return {Promise<string>}
+     */
     receiveMessageHeader(timeout) {
         return this.receive(MESSAGE_HEADER_SIZE, timeout);
     }
 
+    /**
+     * Receives a property element header from the ACP server.
+     *
+     * @param {number} timeout
+     * @return {Promise<string>}
+     */
     receivePropertyElementHeader(timeout) {
         return this.receive(ELEMENT_HEADER_SIZE, timeout);
     }
 
+    /**
+     * Sends and receives data to/from the ACP server.
+     *
+     * @param {Message|Buffer|string} data
+     * @param {number} size
+     * @param {number} timeout
+     * @return {Promise<string>}
+     */
     async sendAndReceive(data, size, timeout = 10000) {
         await this.send(data);
 
         return await this.receive(size, timeout);
     }
 
+    /**
+     * Sends data to the ACP server.
+     *
+     * @param {Message|Buffer|string} data
+     * @return {Promise}
+     */
     send(data) {
         if (data instanceof Message) {
             data = data.composeRawPacket();
@@ -104,7 +158,14 @@ export default class Session {
         });
     }
 
-    receiveSize(size, _timeout = 10000) {
+    /**
+     * Receives raw data from the ACP server.
+     *
+     * @param {number} size
+     * @param {number} timeout
+     * @return {Promise<string>}
+     */
+    receiveSize(size, timeout = 10000) {
         const receivedChunks = [this.buffer.substr(0, size)];
         this.buffer = this.buffer.substr(size);
         this.reading++;
@@ -115,7 +176,7 @@ export default class Session {
             return Promise.resolve(receivedChunks.join(''));
         }
 
-        let timeout;
+        let _timeout = timeout;
 
         return new Promise((resolve, reject) => {
             const defer = () => {
@@ -123,7 +184,7 @@ export default class Session {
                 reject('Timeout');
             };
 
-            timeout = setTimeout(defer, _timeout);
+            let timeout = setTimeout(defer, _timeout);
 
             const listener = data => {
                 data = data.toString('binary');
@@ -159,6 +220,13 @@ export default class Session {
         });
     }
 
+    /**
+     * Receives and decrypts data from the ACP server.
+     *
+     * @param {number} size
+     * @param {number} timeout
+     * @return {Promise<string>}
+     */
     async receive(size, timeout = 10000) {
         let data = await this.receiveSize(size, timeout);
 

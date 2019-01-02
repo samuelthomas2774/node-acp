@@ -3,7 +3,6 @@
  * ACP message composition and parsing
  */
 
-import Property from './property';
 import {generateACPKeystream} from './keystream';
 
 import adler32 from 'adler32';
@@ -11,8 +10,9 @@ import adler32 from 'adler32';
 /**
  * Encrypt password for ACP message header key field.
  * Truncates the password at 0x20 bytes, not sure if this is the right thing to use in all cases.
- * @param {String} password Base station password
- * @return {String} Encrypted password of proper length for the header field
+ *
+ * @param {string} password Base station password
+ * @return {string} Encrypted password of proper length for the header field
  */
 export function generateACPHeaderKey(password) {
     const password_length = 0x20;
@@ -32,6 +32,19 @@ export const HEADER_MAGIC = 'acpp';
 export const HEADER_SIZE = 128;
 
 export default class Message {
+    /**
+     * Creates a Message.
+     *
+     * @param {number} version
+     * @param {number} flags
+     * @param {number} unused
+     * @param {number} command
+     * @param {number} error_code
+     * @param {string} key
+     * @param {string} body
+     * @param {number} body_size
+     * @return {undefined}
+     */
     constructor(version, flags, unused, command, error_code, key, body, body_size) {
         this.version = version;
         this.flags = flags;
@@ -62,8 +75,16 @@ export default class Message {
             + 'Key:           ' + this.key;
     }
 
+    /**
+     * Unpacks an ACP message header.
+     *
+     * @param {string} header_data
+     * @return {object}
+     */
     static unpackHeader(header_data) {
-        if (header_data.length !== HEADER_SIZE) throw new Error('Header data must be 128 characters');
+        if (header_data.length !== HEADER_SIZE) {
+            throw new Error('Header data must be 128 bytes');
+        }
 
         const buffer = Buffer.from(header_data, 'binary');
 
@@ -83,6 +104,12 @@ export default class Message {
         return {magic, version, header_checksum, body_checksum, body_size, flags, unused, command, error_code, key, pad1, pad2};
     }
 
+    /**
+     * Packs an ACP message header.
+     *
+     * @param {object} header_data
+     * @return {string}
+     */
     static packHeader(header_data) {
         const {magic, version, header_checksum, body_checksum, body_size, flags, unused, command, error_code, key, pad1 = '', pad2 = ''} = header_data;
         const buffer = Buffer.alloc(128);
@@ -103,8 +130,15 @@ export default class Message {
         return buffer.toString('binary');
     }
 
-    static async parseRaw(data, return_remaining) {
-        if (HEADER_SIZE > data.length) {
+    /**
+     * Parses a full ACP message.
+     *
+     * @param {string} data
+     * @param {boolean} return_remaining Whether to return any additional data
+     * @return {Message|Array}
+     */
+    static parseRaw(data, return_remaining) {
+        if (data.length < HEADER_SIZE) {
             throw new Error(`Need to pass at least ${HEADER_SIZE} bytes`);
         }
 
@@ -215,6 +249,11 @@ export default class Message {
         return new Message(version, flags, unused, command, error_code, generateACPHeaderKey(password), payload, payload_size);
     }
 
+    /**
+     * Composes a full ACP message.
+     *
+     * @return {string}
+     */
     composeRawPacket() {
         let reply = this.composeHeader();
 
@@ -223,6 +262,13 @@ export default class Message {
         return reply;
     }
 
+    /**
+     * Composes an ACP message header.
+     *
+     * @param {number} size
+     * @param {number} timeout
+     * @return {Promise<string>}
+     */
     composeHeader() {
         const tmphdr = this.constructor.packHeader({
             magic: HEADER_MAGIC, version: this.version,

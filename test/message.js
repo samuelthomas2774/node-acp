@@ -9,15 +9,15 @@ QUnit.test('Pack header', function (assert) {
     const message = new Message(0x00030001, 4, 0, 0x14, 0, generateACPHeaderKey('testing'));
 
     const packed = Message.packHeader({
-        magic: Message.headerMagic,
+        magic: Message.HEADER_MAGIC,
         version: message.version,
         header_checksum: 0,
         body_checksum: 0,
-        body_size: message.bodySize,
+        body_size: message.body_size,
         flags: message.flags,
         unused: message.unused,
         command: message.command,
-        error_code: message.errorCode,
+        error_code: message.error_code,
         key: message.key,
     });
 
@@ -32,15 +32,15 @@ QUnit.test('Pack header with checksum', function (assert) {
     const message = new Message(0x00030001, 4, 0, 0x14, 0, generateACPHeaderKey('testing'));
 
     const packed = Message.packHeader({
-        magic: Message.headerMagic,
+        magic: Message.HEADER_MAGIC,
         version: message.version,
         header_checksum: 0,
         body_checksum: 0,
-        body_size: message.bodySize,
+        body_size: message.body_size,
         flags: message.flags,
         unused: message.unused,
         command: message.command,
-        error_code: message.errorCode,
+        error_code: message.error_code,
         key: message.key,
     });
 
@@ -51,15 +51,15 @@ QUnit.test('Pack header with checksum', function (assert) {
     assert.equal(header_checksum, 558240741);
 
     const packed_checksum = Message.packHeader({
-        magic: Message.headerMagic,
+        magic: Message.HEADER_MAGIC,
         version: message.version,
         header_checksum,
         body_checksum: 0,
-        body_size: message.bodySize,
+        body_size: message.body_size,
         flags: message.flags,
         unused: message.unused,
         command: message.command,
-        error_code: message.errorCode,
+        error_code: message.error_code,
         key: message.key,
     });
 
@@ -76,7 +76,7 @@ QUnit.test('Compose get prop command', function (assert) {
     const expected_hex = '61637070000300011bef117b17c301a700000010000000040000000000000014000000000000000000000000000000007a5c8b71ad6f324f0cac857d868ab5173e09c835f431657f3c9cb56d969aa50700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000064627567000000000000000400000000';
 
     const message = Message.composeGetPropCommand(4, 'testing', payload);
-    const message_hex = Buffer.from(message, 'binary').toString('hex');
+    const message_hex = Buffer.from(message.composeRawPacket(), 'binary').toString('hex');
 
     assert.equal(message_hex, expected_hex);
 });
@@ -91,9 +91,9 @@ QUnit.test('Parse raw command', async function (assert) {
     assert.equal(message.flags, 4);
     assert.equal(message.unused, 0);
     assert.equal(message.command, 20);
-    assert.equal(message.errorCode, 0);
+    assert.equal(message.error_code, 0);
     assert.equal(message.key, Buffer.from('7a5c8b71ad6f324f0cac857d868ab5173e09c835f431657f3c9cb56d969aa507', 'hex').toString('binary'));
     assert.equal(message.body, Buffer.from('64627567000000000000000400000000', 'hex').toString('binary'));
-    assert.equal(message.bodySize, 16);
-    assert.equal(message.bodyChecksum, 398655911);
+    assert.equal(message.body_size, 16);
+    assert.equal(message.body_checksum, 398655911);
 });
