@@ -4,8 +4,10 @@ import {HEADER_SIZE as ELEMENT_HEADER_SIZE} from './property';
 // import {ClientEncryption, ServerEncryption} from './encryption';
 
 import net from 'net';
+import crypto from 'crypto';
+import EventEmitter from 'events';
 
-export default class Session {
+export default class Session extends EventEmitter {
     /**
      * Creates a Session.
      *
@@ -15,6 +17,8 @@ export default class Session {
      * @return {undefined}
      */
     constructor(host, port, password) {
+        super();
+
         this.host = host;
         this.port = port;
         this.password = password;
@@ -43,18 +47,29 @@ export default class Session {
 
             this.socket.connect(this.port, this.host, err => {
                 console.log('Connected', err);
+                this.emit('connected');
                 if (err) reject(err);
                 else resolve();
             });
 
             this.socket.on('close', had_error => {
                 this.socket = undefined;
+                this.emit('disconnected');
             });
 
             this.socket.on('data', data => {
                 console.debug(0, 'Receiving data', data);
-                if (this.reading) return;
+
+                this.emit('raw-data', data);
+
+                if (this.encryption) {
+                    data = this.encryption.decrypt(data);
+                    console.debug(0, 'Decrypted', data);
+                }
+
                 this.buffer += data.toString('binary');
+
+                this.emit('data', data);
             });
         });
     }
@@ -72,6 +87,7 @@ export default class Session {
         return new Promise((resolve, reject) => {
             this.socket.on('close', () => {
                 this.socket = undefined;
+                this.emit('disconnected');
                 resolve();
             });
         });
@@ -144,6 +160,7 @@ export default class Session {
         }
 
         if (this.encryption) {
+            console.debug(0, 'Before encryption', data);
             data = this.encryption.encrypt(data);
         }
 
@@ -162,62 +179,39 @@ export default class Session {
      * Receives raw data from the ACP server.
      *
      * @param {number} size
-     * @param {number} timeout
+     * @param {number} timeout (default is 10000 ms / 10 seconds)
      * @return {Promise<string>}
      */
-    receiveSize(size, timeout = 10000) {
-        const receivedChunks = [this.buffer.substr(0, size)];
-        this.buffer = this.buffer.substr(size);
+    async receiveSize(size, timeout = 10000) {
         this.reading++;
-        let receivedSize = receivedChunks[0].length;
-        let waitingFor = size - receivedSize;
 
-        if (waitingFor <= 0) {
-            return Promise.resolve(receivedChunks.join(''));
+        try {
+            const received_chunks = [this.buffer.substr(0, size)];
+            this.buffer = this.buffer.substr(size);
+            let waiting_for = size - received_chunks[0].length;
+
+            let last_received_at = Date.now();
+
+            while (waiting_for > 0) {
+                if (last_received_at > Date.now() + timeout) {
+                    throw new Error('Timeout');
+                }
+
+                await new Promise(r => setTimeout(r, 1));
+
+                if (this.buffer) {
+                    const received = this.buffer.substr(0, waiting_for);
+                    waiting_for = waiting_for - received.length;
+                    received_chunks.push(received);
+                    this.buffer = this.buffer.substr(received.length);
+                    last_received_at = Date.now();
+                }
+            }
+
+            return received_chunks.join('');
+        } finally {
+            this.reading -= 1;
         }
-
-        let _timeout = timeout;
-
-        return new Promise((resolve, reject) => {
-            const defer = () => {
-                this.reading -= 1;
-                reject('Timeout');
-            };
-
-            let timeout = setTimeout(defer, _timeout);
-
-            const listener = data => {
-                data = data.toString('binary');
-
-                if (data.length > waitingFor) {
-                    this.buffer += data.substr(waitingFor);
-                    data = data.substr(0, waitingFor);
-                }
-
-                receivedChunks.push(data);
-                receivedSize += data.length;
-                waitingFor = waitingFor - data.length;
-
-                clearTimeout(timeout);
-
-                // console.debug('Receiving data', {
-                //     data: data.toString(),
-                //     received: receivedChunks,
-                //     receivedSize,
-                //     waitingFor
-                // });
-
-                if (waitingFor <= 0) {
-                    this.socket.removeListener('data', listener);
-                    this.reading -= 1;
-                    resolve(receivedChunks.join(''));
-                } else {
-                    timeout = setTimeout(defer, _timeout);
-                }
-            };
-
-            this.socket.on('data', listener);
-        });
     }
 
     /**
@@ -230,18 +224,77 @@ export default class Session {
     async receive(size, timeout = 10000) {
         let data = await this.receiveSize(size, timeout);
 
-        if (this.encryption) {
-            data = this.encryption.decrypt(data);
-        }
-
         return data;
     }
 
     enableEncryption(key, client_iv, server_iv) {
-        this.encryption_context = new ClientEncryption(key, client_iv, server_iv);
+        this.encryption = new ClientEncryption(key, client_iv, server_iv);
     }
 
     enableServerEncryption(key, client_iv, server_iv) {
-        this.encryption_context = new ServerEncryption(key, client_iv, server_iv);
+        this.encryption = new ServerEncryption(key, client_iv, server_iv);
+    }
+}
+
+export class Encryption {
+    constructor(key, client_iv, server_iv) {
+        this.key = key;
+        this.client_iv = client_iv;
+        this.server_iv = server_iv;
+
+        const derived_client_key = this.derived_client_key =
+            crypto.pbkdf2Sync(key, PBKDF_salt0, 5, 16, 'sha1'); // KDF.PBKDF2(key, PBKDF_salt0, 16, 5)
+        const derived_server_key = this.derived_server_key =
+            crypto.pbkdf2Sync(key, PBKDF_salt1, 7, 16, 'sha1'); // KDF.PBKDF2(key, PBKDF_salt1, 16, 7);
+                                                                // PBKDF2(password, salt, dkLen=16, count=1000, prf=None)
+
+        this.client_context = this.constructor.createEncryptionContext(derived_client_key, client_iv);
+        this.server_context = this.constructor.createEncryptionContext(derived_server_key, server_iv);
+    }
+
+    static createEncryptionContext(key, iv) {
+        return {
+            cipher: crypto.createCipheriv('aes-128-ctr', key, iv),
+            decipher: crypto.createDecipheriv('aes-128-ctr', key, iv),
+        };
+    }
+
+    clientEncrypt(data) {
+        return this.client_context.cipher.update(data);
+    }
+
+    clientDecrypt(data) {
+        return this.client_context.decipher.update(data);
+    }
+
+    serverEncrypt(data) {
+        return this.server_context.cipher.update(data);
+    }
+
+    serverDecrypt(data) {
+        return this.server_context.decipher.update(data);
+    }
+}
+
+const PBKDF_salt0 = Buffer.from('F072FA3F66B410A135FAE8E6D1D43D5F', 'hex');
+const PBKDF_salt1 = Buffer.from('BD0682C9FE79325BC73655F4174B996C', 'hex');
+
+export class ClientEncryption extends Encryption {
+    encrypt(data) {
+        return this.clientEncrypt(data);
+    }
+
+    decrypt(data) {
+        return this.serverDecrypt(data);
+    }
+}
+
+export class ServerEncryption extends Encryption {
+    encrypt(data) {
+        return this.serverEncrypt(data);
+    }
+
+    decrypt(data) {
+        return this.clientDecrypt(data);
     }
 }

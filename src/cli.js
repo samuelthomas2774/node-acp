@@ -101,7 +101,12 @@ const commandHandler = handler => async argv => {
 yargs.command('authenticate', 'Authenticate', yargs => {}, commandHandler(async (client, argv) => {
     const data = await client.authenticate();
 
-    console.log(data);
+    console.log('Authenticated!', data);
+
+    console.log('Getting syNm prop');
+    const props = await client.getProperties(['syNm']);
+
+    console.log(props[0].format());
 }));
 
 yargs.command('getprop <prop>', 'Get an ACP property', yargs => {

@@ -4,6 +4,11 @@ import Message, {HEADER_SIZE as MESSAGE_HEADER_SIZE} from './message';
 import Property, {HEADER_SIZE as ELEMENT_HEADER_SIZE} from './property';
 import CFLBinaryPList from './cflbinary';
 
+import crypto from 'crypto';
+
+import srp from 'fast-srp-hap';
+import BigInteger from 'fast-srp-hap/lib/jsbn';
+
 export default class Client {
     /**
      * Creates an ACP Client.
@@ -101,6 +106,8 @@ export default class Client {
         const reply = await this.receiveMessageHeader();
         const reply_header = await Message.parseRaw(reply);
 
+        console.log('Get prop response', reply_header);
+
         if (reply_header.error_code !== 0) {
             throw new Error('Error ' . reply_header.error_code);
         }
@@ -110,7 +117,7 @@ export default class Client {
         while (true) {
             const prop_header = await this.receivePropertyElementHeader();
             console.debug('Received property element header:', prop_header);
-            const data = await Property.parseRawElementHeader(prop_header);
+            const data = await Property.unpackHeader(prop_header);
             console.debug(data);
             const {name, flags, size} = data;
 
@@ -160,7 +167,7 @@ export default class Client {
         }
 
         const prop_header = await this.receivePropertyElementHeader();
-        const {name, flags, size} = await Property.parseRawElementHeader(prop_header);
+        const {name, flags, size} = await Property.unpackHeader(prop_header);
 
         const value = await this.receive(size);
 
@@ -196,22 +203,139 @@ export default class Client {
     }
 
     async authenticate() {
-        let payload = {
+        /**
+         * Stage 1 (client)
+         *
+         * Request SRP params, the server's public key (B) and the user's salt.
+         */
+
+        const payload = {
             state: 1,
             username: 'admin',
         };
 
-        const message = Message.composeAuthCommand(4, this.password, CFLBinaryPList.compose(payload));
+        console.log('Authentication stage one data', payload);
+
+        const message = Message.composeAuthCommand(4, CFLBinaryPList.compose(payload));
         await this.send(message);
 
+        /**
+         * Stage 2 (server)
+         *
+         * Return SRP params, the server's public key (B) and the user's salt.
+         */
+
         const response = await this.session.receiveMessage();
-        const data = CFLBinaryPList.parse(response.body);
 
         if (response.error_code !== 0) {
-            console.log('Authenticate error code', response.error_code);
-            return;
+            throw new Error('Authenticate stage two error code ' + response.error_code);
         }
 
-        return data;
+        const data = CFLBinaryPList.parse(response.body);
+
+        console.log('Authentication stage two data', data);
+
+        return this.authenticateStageThree(data);
+    }
+
+    async authenticateStageThree(data) {
+        /**
+         * Stage 3 (client)
+         *
+         * Generate a public key (A) and use the password and salt to generate proof we know the password (M1), then send it to the server.
+         */
+
+        // data === {
+        //     salt: Buffer, // .length === 16
+        //     generator: Buffer, // .toString('hex') === '02'
+        //     publicKey: Buffer, // .length === 192
+        //     modulus: Buffer, // === srp.params[1536].N
+        // }
+
+        const salt = data.salt; // salt.length === 16
+        const B = data.publicKey; // B.length === 192 (not 384)
+
+        const params = {
+            // 1536
+            N_length_bits: 1536,
+            N: new BigInteger(data.modulus),
+            g: new BigInteger(data.generator),
+            hash: 'sha1',
+        };
+
+        const key = crypto.randomBytes(24); // .length === 192
+
+        const srpc = new srp.Client(params, salt, Buffer.from('admin'), Buffer.from(this.password), key);
+        srpc.setB(data.publicKey);
+
+        const A = srpc.computeA(); // === key
+        const M1 = srpc.computeM1(); // .length should === 20
+
+        const iv = crypto.randomBytes(16);
+
+        const payload = {
+            iv,
+            publicKey: A,
+            state: 3,
+            response: M1,
+        };
+
+        // payload === {
+        //     iv: Buffer, // .length === 16
+        //     publicKey: Buffer, // .length === 192
+        //     state: Number, // === 3
+        //     response: Buffer, // .length === 20
+        // }
+
+        console.log('Authentication stage 3 data', payload);
+
+        const request = Message.composeAuthCommand(4, CFLBinaryPList.compose(payload));
+        await this.send(request);
+
+        /**
+         * Stage 4 (server)
+         *
+         * Use the client's public key (A) to verify the client's proof it knows the password (M1) and generate proof the server knows the password (M2).
+         */
+
+        const response = await this.session.receiveMessage();
+
+        if (response.error_code !== 0) {
+            throw new Error('Authenticate stage 4 error code ' + response.error_code);
+        }
+
+        const data_2 = CFLBinaryPList.parse(response.body);
+
+        console.log('Authentication stage 4 data', data_2);
+
+        return this.authenticateStageFive(srpc, iv, data_2);
+    }
+
+    async authenticateStageFive(srpc, client_iv, data) {
+        /**
+         * Stage 5 (client)
+         *
+         * Verify the server's proof it knows the password (M2), and if valid enable session encryption.
+         */
+
+        // data === {
+        //     response: Buffer, // .length === 20
+        //     iv: Buffer, // .length === 16
+        // }
+
+        try {
+            srpc.checkM2(data.response);
+        } catch (err) {
+            // Probably wrong password
+            throw new Error('Error verifying response (M2)');
+        }
+
+        // We now have a key, client iv and server iv
+        // Enable encryption
+        const key = srpc.computeK();
+        const server_iv = data.iv;
+
+        console.log('Enabling encryption...');
+		this.session.enableEncryption(key, client_iv, server_iv);
     }
 }

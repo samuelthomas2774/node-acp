@@ -13,7 +13,7 @@
     },
     "main": "dist/client.js",
     "bin": {
-        "acp": "bin/acp.js"
+        "acp": "bin/acp"
     },
     "files": [
         "dist",
@@ -22,17 +22,18 @@
     "dependencies": {
         "adler32": "^0.1.7",
         "bonjour": "^3.5.0",
-        "yargs": "^12.0.2"
+        "fast-srp-hap": "^1.0.1",
+        "yargs": "^12.0.5"
     },
     "devDependencies": {
         "babel-core": "^6.26.3",
-        "babel-preset-env": "^1.6.1",
+        "babel-preset-env": "^1.7.0",
         "babel-preset-es2015": "^6.24.1",
         "eslint": "^4.19.1",
         "eslint-config-google": "^0.9.1",
         "gulp": "^4.0.0",
         "gulp-babel": "^7.0.1",
         "pump": "^3.0.0",
-        "qunit": "^2.8.0"
+        "qunit": "^2.9.2"
     }
 }

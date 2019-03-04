@@ -237,8 +237,8 @@ export default class Message {
         return new Message(0x00030001, flags, 0, 0x19, 0, generateACPHeaderKey(password), payload);
     }
 
-    static composeAuthCommand(flags, password, payload) {
-        return new Message(0x00030001, flags, 0, 0x1a, 0, generateACPHeaderKey(password), payload);
+    static composeAuthCommand(flags, payload) {
+        return new Message(0x00030001, flags, 0, 0x1a, 0, generateACPHeaderKey(''), payload);
     }
 
     static composeFeatCommand(flags, payload) {
