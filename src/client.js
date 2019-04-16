@@ -203,6 +203,20 @@ export default class Client {
     }
 
     async authenticate() {
+        if (this.session.encryption) {
+            throw new Error('Encryption is already enabled.');
+        }
+
+        if (this.authenticating) return this.authenticating;
+
+        try {
+            await (this.authenticating = this.authenticateStageOne());
+        } finally {
+            this.authenticating = null;
+        }
+    }
+
+    async authenticateStageOne() {
         /**
          * Stage 1 (client)
          *

@@ -91,6 +91,12 @@ const commandHandler = handler => async argv => {
     try {
         await client.connect();
 
+        if (argv.encryption) {
+            console.log('Authenticating');
+            await client.authenticate();
+            console.log('Authenticated!');
+        }
+
         await handler.call(undefined, client, argv);
     } catch (err) {
         console.error(err);
@@ -115,6 +121,11 @@ yargs.command('getprop <prop>', 'Get an ACP property', yargs => {
     yargs.positional('prop', {
         describe: 'The name of the ACP property',
     });
+    yargs.option('encryption', {
+        describe: 'Whether to encrypt connections to the AirPort device',
+        default: true,
+        type: 'boolean',
+    });
 }, commandHandler(async (client, argv) => {
     const props = await client.getProperties([argv.prop]);
 
@@ -127,13 +138,24 @@ yargs.command('setprop <prop> <value>', 'Set an ACP property', yargs => {
     }).positional('value', {
         describe: 'The new value',
     });
+    yargs.option('encryption', {
+        describe: 'Whether to encrypt connections to the AirPort device',
+        default: true,
+        type: 'boolean',
+    });
 }, commandHandler(async (client, argv) => {
     const props = await client.setProperties([new Property(argv.prop, argv.value)]);
 
     console.log(props);
 }));
 
-yargs.command('features', 'Get supported features', yargs => {}, commandHandler(async (client, argv) => {
+yargs.command('features', 'Get supported features', yargs => {
+    yargs.option('encryption', {
+        describe: 'Whether to encrypt connections to the AirPort device',
+        default: true,
+        type: 'boolean',
+    });
+}, commandHandler(async (client, argv) => {
     const features = await client.getFeatures();
 
     console.log(features);

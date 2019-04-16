@@ -19,13 +19,23 @@ export default class Server {
         this.socket = undefined;
     }
 
-    async addUser(username, password) {
+    /**
+     * Adds a user.
+     *
+     * @param {string} username
+     * @param {Buffer|string} password (or verifier)
+     * @param {Buffer} [salt] Must be 16 bytes
+     * @param {object} [params] srp.params[1536]
+     */
+    async addUser(username, password, salt, params) {
         if (username === 'admin') this.password = password;
 
         // The verifier isn't actually used as fast-srp-hap doesn't accept verifiers
-        const params = srp.params[1536];
-        const salt = crypto.randomBytes(16); // .length === 128
-        const verifier = srp.computeVerifier(params, salt, Buffer.from(username), Buffer.from(password));
+        // const salt = await new Promise((rs, rj) => srp.genKey(16, (err, secret2) => err ? rj(err) : rs(secret2)));
+        if (!params) params = srp.params[1536];
+        if (!salt) salt = crypto.randomBytes(16); // .length === 128
+        const verifier = password instanceof Buffer ? password :
+            srp.computeVerifier(params, salt, Buffer.from(username), Buffer.from(password));
 
         this.users.set(username, {params, salt, verifier, password});
     }
