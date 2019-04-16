@@ -27,6 +27,7 @@ lint:
         - npx eslint src test tests
 
 publish:
+    stage: deploy
     script:
         - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
         - npm publish
