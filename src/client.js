@@ -267,6 +267,7 @@ export default class Client {
         // }
 
         const salt = data.salt; // salt.length === 16
+        // eslint-disable-next-line no-unused-vars
         const B = data.publicKey; // B.length === 192 (not 384)
 
         const params = {
@@ -350,6 +351,6 @@ export default class Client {
         const server_iv = data.iv;
 
         console.log('Enabling encryption...');
-		this.session.enableEncryption(key, client_iv, server_iv);
+        this.session.enableEncryption(key, client_iv, server_iv);
     }
 }

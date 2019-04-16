@@ -246,7 +246,7 @@ export class Encryption {
             crypto.pbkdf2Sync(key, PBKDF_salt0, 5, 16, 'sha1'); // KDF.PBKDF2(key, PBKDF_salt0, 16, 5)
         const derived_server_key = this.derived_server_key =
             crypto.pbkdf2Sync(key, PBKDF_salt1, 7, 16, 'sha1'); // KDF.PBKDF2(key, PBKDF_salt1, 16, 7);
-                                                                // PBKDF2(password, salt, dkLen=16, count=1000, prf=None)
+        //                                                         PBKDF2(password, salt, dkLen=16, count=1000, prf=None)
 
         this.client_context = this.constructor.createEncryptionContext(derived_client_key, client_iv);
         this.server_context = this.constructor.createEncryptionContext(derived_server_key, server_iv);

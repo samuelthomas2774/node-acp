@@ -170,7 +170,7 @@ export default class Server {
             } else if (data.state === 3) {
                 console.log('Authenticate stage three');
 
-                const user = this.users.get(session.authenticating_user);
+                const user = this.users.get(session.authenticating_user); // eslint-disable-line no-unused-vars
                 const srps = session.srp;
 
                 srps.setA(data.publicKey);
