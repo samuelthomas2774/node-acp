@@ -46,7 +46,9 @@ yargs.command('server', 'Start the ACP server', yargs => {
         default: '00-00-00-00-00-00',
     });
 }, async argv => {
-    const server = new Server(argv.host || '::', argv.port, argv.password);
+    const server = new Server(argv.host || '::', argv.port);
+
+    await server.addUser('admin', argv.password);
 
     try {
         await server.listen();
