@@ -18,8 +18,8 @@ interface HeaderData {
 export function generateACPProperties() {
     const props: PropData[] = [];
 
-    for (let prop of acp_properties) {
-        const [name, type, description, validator] = prop;
+    for (let [name, prop] of Object.entries(acp_properties)) {
+        const [type, description, validator] = prop;
 
         if (name.length !== 4) throw new Error('Bad name in ACP properties list: ' + name);
 
@@ -201,7 +201,7 @@ class Property<N extends PropName = any, T extends PropType = PropTypes[N], V ex
             value = ValueInitialisers[prop_type](value);
 
             const validator = this.constructor.getPropertyInfoString(name, 'validator');
-            if (validator && !validator(value, name)) {
+            if (validator && !validator(value, name as N)) {
                 throw new Error('Invalid value passed to validator for property ' + name + ' - type: ' + typeof value);
             }
         }
