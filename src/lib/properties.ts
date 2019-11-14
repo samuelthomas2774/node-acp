@@ -316,8 +316,10 @@ const _props = {
     'seFl': ['bin', '????', undefined], // ????
     // 'nvVs': ['', '', undefined],
     // 'dbRC': ['', '', undefined],
-    // @ts-ignore
-    'dbug': ['hex', 'Debug flags', value => 0 <= value <= 0xffffffff],
+    'dbug': ['hex', 'Debug flags', (value: Buffer) => {
+        const v = value.readUIntBE(0, value.length);
+        return 0 <= v && v <= 0xffffffff;
+    }],
     // 'dlvl': ['', '', undefined],
     // 'dcmd': ['', '', undefined],
     // 'dsps': ['', '', undefined],
@@ -351,8 +353,8 @@ const _props = {
     'wsci': ['cfb', 'wsci Blob', undefined],
     // 'FlSu': ['', '', undefined],
     'OTPR': ['hex', 'machdep.otpval', undefined],
-    'acRB': ['dec', 'Reboot device flag', value => value == 0],
-    'acRI': ['dec', 'Reload services??', value => value == 0],
+    'acRB': ['dec', 'Reboot device flag', (value: Buffer) => value.readUIntBE(0, value.length) === 0],
+    'acRI': ['dec', 'Reload services??', (value: Buffer) => value.readUIntBE(0, value.length) === 0],
     // 'acPC': ['', '', undefined],
     // 'acDD': ['', '', undefined],
     // 'acPD': ['', '', undefined],
@@ -360,22 +362,24 @@ const _props = {
     // 'acDS': ['', '', undefined],
     // 'acFN': ['', '', undefined],
     // 'acRP': ['', '', undefined],
-    'acRN': ['dec', 'Resets something... (?)', value => value === 0],
-    'acRF': ['dec', 'Reset to factory defaults', value => value === 0],
+    'acRN': ['dec', 'Resets something... (?)', (value: Buffer) => value.readUIntBE(0, value.length) === 0],
+    'acRF': ['dec', 'Reset to factory defaults', (value: Buffer) => value.readUIntBE(0, value.length) === 0],
     // 'MdmH': ['', '', undefined],
     // 'dirf': ['', '', undefined],
     // 'Afrc': ['', '', undefined],
     // 'lebl': ['', '', undefined],
     // 'lebs': ['', '', undefined],
-    // @ts-ignore
-    'LEDc': ['dec', 'LED color/pattern', value => 0 <= value <= 3],
+    'LEDc': ['dec', 'LED color/pattern', (value: Buffer) => {
+        const v = value.readUIntBE(0, value.length);
+        return 0 <= v && v <= 3;
+    }],
     // 'acEf': ['', '', undefined],
     // 'invr': ['', '', undefined],
     // 'FLSH': ['', '', undefined],
     // 'acPL': ['', '', undefined],
     // 'rReg': ['', '', undefined],
     // 'dReg': ['', '', undefined],
-    'GPIs': ['bin', 'GPIOs values', value => value.length === 8],
+    'GPIs': ['bin', 'GPIOs values', (value: Buffer) => value.length === 8],
     // 'play': ['', '', undefined],
     // 'paus': ['', '', undefined],
     // 'ffwd': ['', '', undefined],

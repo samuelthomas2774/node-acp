@@ -2,11 +2,11 @@
 import CFLBinaryPList from './cflbinary';
 import acp_properties, {PropName, PropType, PropTypes} from './properties';
 
-interface PropData {
-    name: string;
-    type: PropType;
+interface PropData<N extends PropName = any, T extends PropType = PropTypes[N]> {
+    name: N;
+    type: T;
     description: string;
-    validator: ((value: any, name: string) => boolean) | undefined;
+    validator: ((value: Buffer, name: N) => boolean) | undefined;
 }
 
 interface HeaderData {
@@ -198,10 +198,10 @@ class Property<N extends PropName = any, T extends PropType = PropTypes[N], V ex
 
             if (!prop_type || !ValueInitialisers[prop_type]) throw new Error(`Missing handler for ${prop_type} property type`);
 
-            value = ValueInitialisers[prop_type](value);
+            const v: Buffer = value = ValueInitialisers[prop_type](value);
 
             const validator = this.constructor.getPropertyInfoString(name, 'validator');
-            if (validator && !validator(value, name as N)) {
+            if (validator && !validator(v, name as N)) {
                 throw new Error('Invalid value passed to validator for property ' + name + ' - type: ' + typeof value);
             }
         }
