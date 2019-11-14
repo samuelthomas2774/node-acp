@@ -1,16 +1,16 @@
 
 import CFLBinaryPList from './cflbinary';
-import acp_properties from './properties';
+import acp_properties, {PropName, PropType, PropTypes} from './properties';
 
 interface PropData {
     name: string;
-    type: 'str' | 'dec' | 'hex' | 'log' | 'mac' | 'cfb' | 'bin';
+    type: PropType;
     description: string;
     validator: ((value: any, name: string) => boolean) | undefined;
 }
 
 interface HeaderData {
-    name: string;
+    name: PropName;
     flags: number;
     size: number;
 }
@@ -38,9 +38,144 @@ export const props = generateACPProperties();
 
 export const HEADER_SIZE = 12;
 
-class Property {
-    readonly name: string | undefined;
-    readonly value: any | undefined;
+export type SupportedValues = {
+    dec: Buffer | string | number;
+    hex: Buffer | string | number;
+    mac: Buffer | string;
+    bin: Buffer | string;
+    cfb: any;
+    log: Buffer | string;
+    str: Buffer | string;
+};
+
+const ValueInitialisers: {
+    [T in keyof SupportedValues]: (value: Buffer | string | SupportedValues[T]) => Buffer;
+} = {
+    dec(value) {
+        if (value instanceof Buffer) {
+            return value;
+        } else if (typeof value === 'number') {
+            const buffer = Buffer.alloc(4);
+            buffer.writeUInt32BE(value, 0);
+            return buffer;
+        } else if (typeof value === 'string') {
+            return Buffer.from(value, 'binary');
+        } else {
+            throw new Error('Invalid number value: ' + value);
+        }
+    },
+    hex(value) {
+        if (value instanceof Buffer) {
+            return value;
+        } else if (typeof value === 'number') {
+            const buffer = Buffer.alloc(4);
+            buffer.writeUInt32BE(value, 0);
+            return buffer;
+        } else if (typeof value === 'string') {
+            return Buffer.from(value, 'binary');
+        } else {
+            throw new Error('Invalid hex value: ' + value);
+        }
+    },
+    mac(value) {
+        if (value instanceof Buffer) return value;
+
+        if (typeof value === 'string') {
+            if (value.length === 6) return Buffer.from(value, 'binary');
+
+            const mac_bytes = value.split(':');
+
+            if (mac_bytes.length === 6) {
+                return Buffer.from(mac_bytes.join(''), 'hex');
+            }
+        }
+
+        throw new Error('Invalid mac value: ' + value);
+    },
+    bin(value) {
+        if (value instanceof Buffer) {
+            return value;
+        } else if (typeof value === 'string') {
+            return Buffer.from(value, 'binary');
+        } else {
+            throw new Error('Invalid bin value: ' + value);
+        }
+    },
+    cfb(value) {
+        if (value instanceof Buffer) {
+            return value;
+        } else if (typeof value === 'string') {
+            return Buffer.from(value, 'binary');
+        } else {
+            throw new Error('Invalid cfb value: ' + value);
+        }
+    },
+    log(value) {
+        if (value instanceof Buffer) {
+            return value;
+        } else if (typeof value === 'string') {
+            return Buffer.from(value, 'binary');
+        } else {
+            throw new Error('Invalid log value: ' + value);
+        }
+    },
+    str(value) {
+        if (value instanceof Buffer) {
+            return value;
+        } else if (typeof value === 'string') {
+            return Buffer.from(value, 'binary');
+        } else {
+            throw new Error('Invalid str value: ' + value);
+        }
+    },
+};
+
+export type FormattedValues = {
+    dec: number;
+    hex: string;
+    mac: string;
+    bin: Buffer;
+    cfb: any;
+    log: string;
+    str: string;
+};
+
+const ValueFormatters: {
+    [T in keyof SupportedValues]: (value: Buffer) => FormattedValues[T];
+} = {
+    dec(value) {
+        return value.readUIntBE(0, value.length);
+    },
+    hex(value) {
+        return '0x' + value.toString('hex');
+    },
+    mac(value) {
+        const mac_bytes: string[] = [];
+
+        for (let i = 0; i < 6; i++) {
+            mac_bytes.push(value.slice(i).toString('hex'));
+        }
+
+        return mac_bytes.join(':');
+    },
+    bin(value) {
+        // return Buffer.from(value, 'binary').toString('hex');
+        return value;
+    },
+    cfb(value) {
+        return CFLBinaryPList.parse(value);
+    },
+    log(value) {
+        return value.toString('binary').split('\x00').map(line => line.trim() + '\n').join('');
+    },
+    str(value) {
+        return value.toString('utf-8');
+    },
+}
+
+class Property<N extends PropName = any, T extends PropType = PropTypes[N], V extends SupportedValues[T] = Buffer | string> {
+    readonly name?: N;
+    readonly value?: Buffer;
 
     /**
      * Creates a Property.
@@ -48,7 +183,7 @@ class Property {
      * @param {string} name
      * @param {string} value
      */
-    constructor(name?: string, value?: any) {
+    constructor(name?: N | '\0\0\0\0', value?: Buffer | string | V) {
         if (name === '\x00\x00\x00\x00' && value === '\x00\x00\x00\x00') {
             name = undefined;
             value = undefined;
@@ -60,11 +195,10 @@ class Property {
 
         if (value) {
             const prop_type = this.constructor.getPropertyInfoString(name, 'type');
-            const init_handler_name = `__init_${prop_type}`;
 
-            if (!this[init_handler_name]) throw new Error(`Missing handler for ${prop_type} property type`);
+            if (!prop_type || !ValueInitialisers[prop_type]) throw new Error(`Missing handler for ${prop_type} property type`);
 
-            value = this[init_handler_name](value);
+            value = ValueInitialisers[prop_type](value);
 
             const validator = this.constructor.getPropertyInfoString(name, 'validator');
             if (validator && !validator(value, name)) {
@@ -72,74 +206,8 @@ class Property {
             }
         }
 
-        this.name = name;
-        this.value = value;
-    }
-
-    __init_dec(value: number | string) {
-        if (typeof value === 'number') {
-            return value;
-        } else if (typeof value === 'string') {
-            return Buffer.from(value, 'binary').readUIntBE(0, value.length);
-        } else {
-            throw new Error('Invalid number value: ' + value);
-        }
-    }
-
-    __init_hex(value: number | string) {
-        if (typeof value === 'number') {
-            return value;
-        } else if (typeof value === 'string') {
-            return Buffer.from(value, 'binary').readUInt32BE(0);
-        } else {
-            throw new Error('Invalid hex value: ' + value);
-        }
-    }
-
-    __init_mac(value: string) {
-        if (typeof value === 'string') {
-            if (value.length === 6) return value;
-
-            const mac_bytes = value.split(':');
-
-            if (mac_bytes.length === 6) {
-                return Buffer.from(mac_bytes.join(''), 'hex').toString('binary');
-            }
-        }
-
-        throw new Error('Invalid mac value: ' + value);
-    }
-
-    __init_bin(value: string) {
-        if (typeof value === 'string') {
-            return value;
-        } else {
-            throw new Error('Invalid bin value: ' + value);
-        }
-    }
-
-    __init_cfb(value: string) {
-        if (typeof value === 'string') {
-            return value;
-        } else {
-            throw new Error('Invalid cfb value: ' + value);
-        }
-    }
-
-    __init_log(value: string) {
-        if (typeof value === 'string') {
-            return value;
-        } else {
-            throw new Error('Invalid log value: ' + value);
-        }
-    }
-
-    __init_str(value: string) {
-        if (typeof value === 'string') {
-            return value;
-        } else {
-            throw new Error('Invalid str value: ' + value);
-        }
+        this.name = name as N | undefined;
+        this.value = value as Buffer;
     }
 
     /**
@@ -147,50 +215,14 @@ class Property {
      *
      * @return {*}
      */
-    format() {
-        if (!this.name || !this.value) return '';
+    format(): FormattedValues[T] | null {
+        if (!this.name || !this.value) return null;
 
-        const propType = this.constructor.getPropertyInfoString(this.name, 'type');
-        const formatHandlerName = `__format_${propType}`;
+        const type = this.constructor.getPropertyInfoString(this.name, 'type');
 
-        if (!this[formatHandlerName]) throw new Error(`Missing format handler for ${propType} property type`);
+        if (!type || !ValueFormatters[type]) throw new Error(`Missing format handler for ${type} property type`);
 
-        return this[formatHandlerName](this.value);
-    }
-
-    __format_dec(value: number) {
-        return value.toString();
-    }
-
-    __format_hex(value: number) {
-        return '0x' + value.toString(16);
-    }
-
-    __format_mac(value: string) {
-        const mac_bytes = [];
-        value = Buffer.from(value, 'binary').toString('hex');
-
-        for (let i = 0; i < 6; i++) {
-            mac_bytes.push(value.substr(i, 2));
-        }
-
-        return mac_bytes.join(':');
-    }
-
-    __format_bin(value: string) {
-        return Buffer.from(value, 'binary').toString('hex');
-    }
-
-    __format_cfb(value: string) {
-        return CFLBinaryPList.parse(value);
-    }
-
-    __format_log(value: string) {
-        return value.split('\x00').map(line => line.trim() + '\n').join('');
-    }
-
-    __format_str(value: string) {
-        return Buffer.from(value, 'binary').toString('utf8');
+        return ValueFormatters[type](this.value);
     }
 
     toString() {
@@ -200,10 +232,14 @@ class Property {
     /**
      * Returns the names of known properties.
      *
-     * @return {Array}
+     * @return {string[]}
      */
     static getSupportedPropertyNames() {
         return props.map(prop => prop.name);
+    }
+
+    get info(): PropData {
+        return props.find(p => p.name === this.name);
     }
 
     static getPropertyInfoString<T extends keyof PropData>(propName: string, key: T): PropData[T] {
@@ -227,15 +263,16 @@ class Property {
     /**
      * Parses an ACP property.
      *
-     * @param {string} data
+     * @param {Buffer|string} data
      * @return {Property}
      */
-    static parseRawElement(data: string) {
+    static parseRawElement(data: Buffer | string) {
         // eslint-disable-next-line no-unused-vars
-        const {name, flags, size} = this.unpackHeader(data.substr(0, HEADER_SIZE));
+        const {name, flags, size} = this.unpackHeader(data instanceof Buffer ? data.slice(0, HEADER_SIZE) :
+            data.substr(0, HEADER_SIZE));
 
         // TODO: handle flags
-        return new this(name, data.substr(HEADER_SIZE));
+        return new this(name as PropName, data instanceof Buffer ? data.slice(HEADER_SIZE) : data.substr(HEADER_SIZE));
     }
 
     /**
@@ -243,29 +280,32 @@ class Property {
      *
      * @param {number} flags
      * @param {Property} property
-     * @return {string}
+     * @return {Buffer}
      */
     static composeRawElement(flags: number, property: Property) {
         const name = property.name ? property.name : '\x00\x00\x00\x00';
-        const value = property.value ? property.value : '\x00\x00\x00\x00';
+        const value = property.value instanceof Buffer ? property.value :
+            typeof property.value === 'number' ? property.value :
+            property.value ? Buffer.from(property.value, 'binary') :
+            Buffer.from('\x00\x00\x00\x00', 'binary');
 
         if (typeof value === 'number') {
             const buffer = Buffer.alloc(4);
             buffer.writeUInt32BE(value, 0);
 
-            return this.composeRawElementHeader(name, flags, 4) + buffer.toString('binary');
-        } else if (typeof value === 'string') {
-            return this.composeRawElementHeader(name, flags, value.length) + value;
+            return Buffer.concat([this.composeRawElementHeader(name, flags, 4), buffer]);
+        } else if (value instanceof Buffer) {
+            return Buffer.concat([this.composeRawElementHeader(name, flags, value.length), value]);
         } else {
             throw new Error('Unhandled property type for raw element composition');
         }
     }
 
-    static composeRawElementHeader(name: string, flags: number, size: number) {
+    static composeRawElementHeader(name: PropName, flags: number, size: number) {
         try {
             return this.packHeader({name, flags, size});
         } catch (err) {
-            console.error('Error packing', name, flags, size, '- :', err);
+            console.error('Error packing property %s, flags %d, size %d - :', name, flags, size, err);
             throw err;
         }
     }
@@ -274,7 +314,7 @@ class Property {
      * Packs an ACP property header.
      *
      * @param {object} header_data
-     * @return {string}
+     * @return {Buffer}
      */
     static packHeader(header_data: HeaderData) {
         const {name, flags, size} = header_data;
@@ -284,23 +324,23 @@ class Property {
         buffer.writeUInt32BE(flags, 4);
         buffer.writeUInt32BE(size, 8);
 
-        return buffer.toString('binary');
+        return buffer;
     }
 
     /**
      * Unpacks an ACP property header.
      *
-     * @param {string} header_data
+     * @param {Buffer|string} header_data
      * @return {object}
      */
-    static unpackHeader(header_data: string): HeaderData {
+    static unpackHeader(header_data: Buffer | string): HeaderData {
         if (header_data.length !== HEADER_SIZE) {
             throw new Error('Header data must be 12 characters');
         }
 
-        const buffer = Buffer.from(header_data, 'binary');
+        const buffer = header_data instanceof Buffer ? header_data : Buffer.from(header_data, 'binary');
 
-        const name = buffer.slice(0, 4).toString();
+        const name = buffer.slice(0, 4).toString() as PropName;
         const flags = buffer.readUInt32BE(4);
         const size = buffer.readUInt32BE(8);
 
@@ -308,7 +348,7 @@ class Property {
     }
 }
 
-interface Property {
+interface Property<N extends PropName = any, T extends PropType = PropTypes[N], V extends SupportedValues[T] = Buffer | string> {
     constructor: typeof Property;
 }
 

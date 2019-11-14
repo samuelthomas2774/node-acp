@@ -9,7 +9,7 @@ export default class CFLBinaryPList {
      * Compose JavaScript object into equivalent plist.
      *
      * @param {*} object
-     * @return {string} data
+     * @return {Buffer} data
      */
     static compose(object: any) {
         return CFLBinaryPListComposer.compose(object);
@@ -18,10 +18,10 @@ export default class CFLBinaryPList {
     /**
      * Parse plist data into equivalent JavaScript built in.
      *
-     * @param {string} data
+     * @param {Buffer|string} data
      * @return {*}
      */
-    static parse(data: string) {
+    static parse(data: Buffer | string) {
         return CFLBinaryPListParser.parse(data);
     }
 }
@@ -40,7 +40,7 @@ export class CFLBinaryPListComposer {
 
         data += FOOTER_MAGIC;
 
-        return data;
+        return Buffer.from(data, 'binary');
     }
 
     /**
@@ -167,7 +167,9 @@ export class CFLBinaryPListParser {
      * @param {string} data
      * @return {*}
      */
-    static parse(data: string) {
+    static parse(data: Buffer | string) {
+        if (data instanceof Buffer) data = data.toString('binary');
+
         if (data.length < HEADER_SIZE + FOOTER_SIZE + 1) {
             throw new Error('Not enough data to parse');
         }

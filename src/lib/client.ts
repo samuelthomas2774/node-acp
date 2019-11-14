@@ -2,6 +2,7 @@
 import Session from './session';
 import Message, {HEADER_SIZE as MESSAGE_HEADER_SIZE} from './message';
 import Property, {HEADER_SIZE as ELEMENT_HEADER_SIZE} from './property';
+import {PropName} from './properties';
 import CFLBinaryPList from './cflbinary';
 
 import crypto from 'crypto';
@@ -101,7 +102,7 @@ export default class Client {
      * @param {Array} props
      * @return {Array}
      */
-    async getProperties(props: (Property | string)[]) {
+    async getProperties(props: (Property | PropName)[]) {
         let payload = '';
 
         for (let name of props) {

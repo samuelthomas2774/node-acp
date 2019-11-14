@@ -1,7 +1,8 @@
 
 import Session from './session';
 import Message, {HEADER_SIZE as MESSAGE_HEADER_SIZE} from './message';
-import Property, {HEADER_SIZE as ELEMENT_HEADER_SIZE} from './property';
+import Property, {HEADER_SIZE as ELEMENT_HEADER_SIZE, SupportedValues} from './property';
+import {PropName, PropType, PropTypes} from './properties';
 import CFLBinaryPList from './cflbinary';
 
 import net from 'net';
@@ -228,7 +229,7 @@ export default class Server {
             console.log('Received get prop command');
 
             let data = message.body;
-            const props = [];
+            const props: Property[] = [];
 
             // Read the requested props into an array of Propertys
             while (data.length) {
@@ -269,11 +270,11 @@ export default class Server {
         console.error('Unknown command', message.command, message);
     }
 
-    getProperties(props) {
+    getProperties(props: Property[]) {
         return Promise.all(props.map(prop => this.getProperty(prop)));
     }
 
-    getProperty(prop) {
+    getProperty<N extends PropName, T extends PropType = PropTypes[N]>(prop: Property<N>): Property | Buffer | string | SupportedValues[T] {
         if (prop.name === 'dbug') return new Property('dbug', 0x3000);
     }
 }

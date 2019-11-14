@@ -1,9 +1,5 @@
-#!/usr/bin/env node
 
-import Client from '../lib/client';
-import Server from '../lib/server';
-import Property from '../lib/property';
-
+import Client, {Server, Property, PropName} from '..';
 import yargs from 'yargs';
 import bonjour from 'bonjour';
 
@@ -155,7 +151,7 @@ yargs.command('getprop <prop>', 'Get an ACP property', yargs => {
 }));
 
 interface SetPropArguments {
-    prop: string;
+    prop: PropName;
     value: string;
     encryption: boolean;
 }

@@ -6,7 +6,6 @@
 // description (required) is a short, one-line description of the property
 // validation (optional) is eval()d to verify the input value for setting a property
 
-type PropType = 'str' | 'dec' | 'hex' | 'log' | 'mac' | 'cfb' | 'bin';
 type Validator = (value: any, name: string) => boolean;
 
 type Prop = [string, PropType, string, Validator | undefined];
@@ -551,3 +550,87 @@ const props: Prop[] = [
 ];
 
 export default props;
+
+export type PropTypes = {
+    'buil': 'str';
+    'DynS': 'cfb';
+    'fire': 'cfb';
+    'srcv': 'str';
+    'syNm': 'str';
+    'syPW': 'str';
+    'syPR': 'str';
+    'syGP': 'str';
+    'syDs': 'str';
+    'syVs': 'str';
+    'syVr': 'str';
+    'syIn': 'str';
+    'syFl': 'hex';
+    'syAM': 'str';
+    'syAP': 'dec';
+    'sySN': 'str';
+    'ssSK': 'str';
+    'syLR': 'cfb';
+    'syAR': 'cfb';
+    'syUT': 'dec';
+    'minS': 'str';
+    'chip': 'str';
+    'sySI': 'cfb';
+    'TMEn': 'hex';
+    'CLTM': 'cfb';
+    'sySt': 'cfb';
+    'syBL': 'str';
+    'time': 'dec';
+    'timz': 'cfb';
+    'usrd': 'cfb';
+    'dSpn': 'cfb';
+    'syMS': 'str';
+    'diag': 'bin';
+    'raNm': 'str';
+    'raMA': 'mac';
+    'raSL': 'cfb';
+    'raSR': 'cfb';
+    'WiFi': 'cfb';
+    'rCAL': 'cfb';
+    'waCV': 'bin';
+    'waIn': 'bin';
+    'waIP': 'bin';
+    'waRA': 'bin';
+    'waMA': 'mac';
+    'waDI': 'cfb';
+    'laMA': 'mac';
+    'DRes': 'cfb';
+    'dhSL': 'cfb';
+    'tACL': 'cfb';
+    'ntSV': 'str';
+    'slvl': 'dec';
+    'logm': 'log';
+    'USBi': 'cfb';
+    'prni': 'cfb';
+    'MaSt': 'cfb';
+    'seFl': 'bin';
+    'dbug': 'hex';
+    'ctim': 'hex';
+    'Prof': 'cfb';
+    'lcVs': 'str';
+    'wsci': 'cfb';
+    'OTPR': 'hex';
+    'acRB': 'dec';
+    'acRI': 'dec';
+    'acRN': 'dec';
+    'acRF': 'dec';
+    'LEDc': 'dec';
+    'GPIs': 'bin';
+    'fe01': 'hex';
+    'feat': 'str';
+    'prop': 'str';
+    'hw01': 'hex';
+    'pECC': 'cfb';
+    'fugp': 'str';
+    'cks0': 'hex';
+    'cks1': 'hex';
+    'cks2': 'hex';
+    'rteI': 'cfb';
+};
+
+export type PropName = keyof PropTypes;
+export type PropType = 'str' | 'dec' | 'hex' | 'log' | 'mac' | 'cfb' | 'bin';

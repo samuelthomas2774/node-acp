@@ -20,7 +20,7 @@ QUnit.test('Pack header', assert => {
         key: message.key,
     });
 
-    const message_hex = Buffer.from(packed, 'binary').toString('hex');
+    const message_hex = packed.toString('hex');
 
     assert.equal(message_hex, expected_hex);
 });
@@ -43,7 +43,7 @@ QUnit.test('Pack header with checksum', assert => {
         key: message.key,
     });
 
-    const header_checksum = adler32.sum(Buffer.from(packed, 'binary'));
+    const header_checksum = adler32.sum(packed);
 
     console.log('Header checksum', header_checksum);
 
@@ -62,7 +62,7 @@ QUnit.test('Pack header with checksum', assert => {
         key: message.key,
     });
 
-    const message_hex = Buffer.from(packed_checksum, 'binary').toString('hex');
+    const message_hex = packed_checksum.toString('hex');
 
     assert.equal(message_hex, expected_hex);
 });
@@ -75,7 +75,7 @@ QUnit.test('Compose get prop command', assert => {
     const expected_hex = '61637070000300011bef117b17c301a700000010000000040000000000000014000000000000000000000000000000007a5c8b71ad6f324f0cac857d868ab5173e09c835f431657f3c9cb56d969aa50700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000064627567000000000000000400000000';
 
     const message = Message.composeGetPropCommand(4, 'testing', payload);
-    const message_hex = Buffer.from(message.composeRawPacket(), 'binary').toString('hex');
+    const message_hex = message.composeRawPacket().toString('hex');
 
     assert.equal(message_hex, expected_hex);
 });
@@ -91,8 +91,8 @@ QUnit.test('Parse raw command', async assert => {
     assert.equal(message.unused, 0);
     assert.equal(message.command, 20);
     assert.equal(message.error_code, 0);
-    assert.equal(message.key, Buffer.from('7a5c8b71ad6f324f0cac857d868ab5173e09c835f431657f3c9cb56d969aa507', 'hex').toString('binary'));
-    assert.equal(message.body, Buffer.from('64627567000000000000000400000000', 'hex').toString('binary'));
+    assert.equal(message.key.toString('hex'), '7a5c8b71ad6f324f0cac857d868ab5173e09c835f431657f3c9cb56d969aa507');
+    assert.equal(message.body.toString('hex'), '64627567000000000000000400000000');
     assert.equal(message.body_size, 16);
     assert.equal(message.body_checksum, 398655911);
 });

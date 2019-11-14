@@ -238,11 +238,11 @@ export default class Session extends EventEmitter {
         return data;
     }
 
-    enableEncryption(key, client_iv, server_iv) {
+    enableEncryption(key: Buffer, client_iv: Buffer, server_iv: Buffer) {
         this.encryption = new ClientEncryption(key, client_iv, server_iv);
     }
 
-    enableServerEncryption(key, client_iv, server_iv) {
+    enableServerEncryption(key: Buffer, client_iv: Buffer, server_iv: Buffer) {
         this.encryption = new ServerEncryption(key, client_iv, server_iv);
     }
 }
@@ -253,9 +253,9 @@ interface EncryptionContext {
 }
 
 class Encryption {
-    readonly key: string;
-    readonly client_iv: string;
-    readonly server_iv: string;
+    readonly key: Buffer;
+    readonly client_iv: Buffer;
+    readonly server_iv: Buffer;
 
     readonly derived_client_key: Buffer;
     readonly derived_server_key: Buffer;
@@ -263,7 +263,7 @@ class Encryption {
     readonly client_context: EncryptionContext;
     readonly server_context: EncryptionContext;
 
-    constructor(key: string, client_iv: string, server_iv: string) {
+    constructor(key: Buffer, client_iv: Buffer, server_iv: Buffer) {
         this.key = key;
         this.client_iv = client_iv;
         this.server_iv = server_iv;
@@ -278,7 +278,7 @@ class Encryption {
         this.server_context = this.constructor.createEncryptionContext(derived_server_key, server_iv);
     }
 
-    static createEncryptionContext(key: Buffer, iv: string) {
+    static createEncryptionContext(key: Buffer, iv: Buffer) {
         return {
             cipher: crypto.createCipheriv('aes-128-ctr', key, iv),
             decipher: crypto.createDecipheriv('aes-128-ctr', key, iv),
