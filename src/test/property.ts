@@ -26,5 +26,5 @@ QUnit.test('Parse raw element', async assert => {
     const property = await Property.parseRawElement(raw_element) as Property<'dbug'>;
 
     assert.equal(property.name, 'dbug');
-    assert.equal(parseInt(property.format()), 0x3000);
+    assert.equal(parseInt(property.format()!), 0x3000);
 });

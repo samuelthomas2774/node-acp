@@ -194,13 +194,13 @@ class Property<N extends PropName = any, T extends PropType = PropTypes[N]> {
         }
 
         if (value) {
-            const prop_type = this.constructor.getPropertyInfoString(name, 'type');
+            const prop_type = this.constructor.getPropertyInfoString(name as N, 'type') as PropType;
 
             if (!prop_type || !ValueInitialisers[prop_type]) throw new Error(`Missing handler for ${prop_type} property type`);
 
             const v: Buffer = value = ValueInitialisers[prop_type](value);
 
-            const validator = this.constructor.getPropertyInfoString(name, 'validator');
+            const validator = this.constructor.getPropertyInfoString(name as N, 'validator');
             if (validator && !validator(v, name as N)) {
                 throw new Error('Invalid value passed to validator for property ' + name + ' - type: ' + typeof value);
             }
@@ -218,7 +218,7 @@ class Property<N extends PropName = any, T extends PropType = PropTypes[N]> {
     format(): FormattedValues[T] | null {
         if (!this.name || !this.value) return null;
 
-        const type = this.constructor.getPropertyInfoString(this.name, 'type');
+        const type = this.constructor.getPropertyInfoString(this.name, 'type') as PropType;
 
         if (!type || !ValueFormatters[type]) throw new Error(`Missing format handler for ${type} property type`);
 
@@ -238,7 +238,7 @@ class Property<N extends PropName = any, T extends PropType = PropTypes[N]> {
         return props.map(prop => prop.name);
     }
 
-    get info(): PropData {
+    get info() {
         return props.find(p => p.name === this.name);
     }
 

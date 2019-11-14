@@ -18,7 +18,7 @@ export default class Client {
 
     readonly session: Session;
 
-    private authenticating: Promise<void>;
+    private authenticating: Promise<void> | null = null;
 
     /**
      * Creates an ACP Client.
@@ -133,7 +133,7 @@ export default class Client {
             const value = await this.receive(size);
 
             if (flags & 1) {
-                const error_code = Buffer.from(value, 'binary').readInt32BE(0);
+                const error_code = value.readInt32BE(0);
                 throw new Error('Error requesting value for property "' + name + '": ' + error_code);
             }
 
@@ -180,7 +180,7 @@ export default class Client {
         const value = await this.receive(size);
 
         if (flags & 1) {
-            const error_code = Buffer.from(value, 'binary').readUInt32BE(0);
+            const error_code = value.readUInt32BE(0);
             throw new Error('Error setting value for property "' + name + '": ' + error_code);
         }
 
@@ -218,7 +218,7 @@ export default class Client {
         return this.setProperties([new Property('acRB', 0)]);
     }
 
-    async flashPrimary(payload) {
+    async flashPrimary(payload: Buffer) {
         this.send(Message.composeFlashPrimaryCommand(0, this.password, payload));
         const reply_header = await Message.parseRaw(await this.receiveMessageHeader());
         return await this.receive(reply_header.body_size);
@@ -267,7 +267,7 @@ export default class Client {
             throw new Error('Authenticate stage two error code ' + response.error_code);
         }
 
-        const data = CFLBinaryPList.parse(response.body);
+        const data = CFLBinaryPList.parse(response.body!);
 
         console.log('Authentication stage two data', data);
 
@@ -348,7 +348,7 @@ export default class Client {
             throw new Error('Authenticate stage 4 error code ' + response.error_code);
         }
 
-        const data_2 = CFLBinaryPList.parse(response.body);
+        const data_2 = CFLBinaryPList.parse(response.body!);
 
         console.log('Authentication stage 4 data', data_2);
 

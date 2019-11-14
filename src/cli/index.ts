@@ -57,7 +57,7 @@ yargs.command('server', 'Start the ACP server', yargs => {
 }, async (argv: GlobalArguments & ServerArguments) => {
     const server = new Server(argv.host || '::', argv.port);
 
-    await server.addUser('admin', argv.password);
+    await server.addUser('admin', argv.password!);
 
     try {
         await server.listen();
@@ -99,7 +99,7 @@ interface ClientCommandArguments extends GlobalArguments {
 }
 
 const commandHandler = <A extends ClientCommandArguments = ClientCommandArguments>(handler: (client: Client, argv: A) => void) => async (argv: A) => {
-    const client = new Client(argv.host || 'airport-base-station.local', argv.port, argv.password);
+    const client = new Client(argv.host || 'airport-base-station.local', argv.port, argv.password!);
 
     try {
         await client.connect();

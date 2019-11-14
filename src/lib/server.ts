@@ -13,7 +13,7 @@ export default class Server {
     readonly host: string;
     readonly port: number;
 
-    password: string = null;
+    password: string | null = null;
     readonly users = new Map<string, {
         params: srp.SrpParams;
         salt: Buffer;
@@ -21,9 +21,9 @@ export default class Server {
         password?: string;
     }>();
 
-    socket: net.Server = null;
+    socket: net.Server | null = null;
 
-    private reading: number;
+    private reading: number | null = null;
 
     constructor(host: string, port: number) {
         this.host = host;
@@ -50,7 +50,7 @@ export default class Server {
         const verifier = password instanceof Buffer ? password :
             srp.computeVerifier(params, salt, Buffer.from(username), Buffer.from(password));
 
-        this.users.set(username, {params, salt, verifier, password: typeof password === 'string' ? password : null});
+        this.users.set(username, {params, salt, verifier, password: typeof password === 'string' ? password : undefined});
     }
 
     listen(timeout?: number) {
@@ -58,7 +58,7 @@ export default class Server {
             this.socket = new net.Server();
 
             setTimeout(() => {
-                this.reading -= 1;
+                // this.reading -= 1;
                 reject('Timeout');
             }, timeout);
 
@@ -69,8 +69,8 @@ export default class Server {
                 else resolve();
             });
 
-            this.socket.on('close', had_error => {
-                this.socket = undefined;
+            this.socket.on('close', (had_error: boolean) => {
+                this.socket = null;
             });
 
             this.socket.on('connection', connection => {
@@ -85,12 +85,12 @@ export default class Server {
         this.socket.close();
 
         return new Promise((resolve, reject) => {
-            this.socket.on('close', resolve);
+            this.socket!.on('close', resolve);
         });
     }
 
-    handleConnection(socket) {
-        const session = new Session(socket.remoteAddress, socket.remotePort, this.password);
+    handleConnection(socket: net.Socket) {
+        const session = new Session(socket.remoteAddress!, socket.remotePort!, this.password!);
         session.socket = socket;
 
         console.log('New connection from', session.host, session.port);
@@ -108,7 +108,7 @@ export default class Server {
 
             session.emit('data', data);
 
-            session.buffer += data.toString('binary');
+            session.buffer = Buffer.concat([session.buffer, data]);
 
             // Try decoding the data as a message
             this.handleData(session);
@@ -117,13 +117,13 @@ export default class Server {
         return session;
     }
 
-    async handleData(session) {
+    async handleData(session: Session) {
         while (session.buffer.length >= MESSAGE_HEADER_SIZE) {
             await this.tryHandleMessage(session);
         }
     }
 
-    async tryHandleMessage(session) {
+    async tryHandleMessage(session: Session) {
         try {
             const [message, data] = await Message.parseRaw(session.buffer, true);
 
@@ -139,17 +139,20 @@ export default class Server {
             this.handleMessage(session, message);
         } catch (err) {
             console.error('Error handling message from', session.host, session.port, err);
-            session.buffer = '';
+            session.buffer = Buffer.alloc(0);
         }
     }
 
-    async handleMessage(session, message) {
+    async handleMessage(session: Session & {
+        authenticating_user?: string;
+        srp?: srp.Server;
+    }, message: Message) {
         // console.log('Received message', message);
 
         switch (message.command) {
         // Authenticate
         case 0x1a: {
-            const data = CFLBinaryPList.parse(message.body);
+            const data = CFLBinaryPList.parse(message.body!);
 
             console.log('Authenticate request from', session.host, session.port, data);
 
@@ -162,13 +165,13 @@ export default class Server {
                 // console.log('Authenticating user', user);
 
                 const key = crypto.randomBytes(24); // .length === 192
-                const params = user.params || srp.params[1536];
-                const salt = user.salt || Buffer.from(crypto.randomBytes(16));
+                const params = user && user.params || srp.params[1536];
+                const salt = user && user.salt || Buffer.from(crypto.randomBytes(16));
 
                 // Why doesn't fast-srp-hap allow using a verifier instead of storing the plain text password?
                 // const verifier = srp.computeVerifier(params, salt, Buffer.from(username), Buffer.from(password));
 
-                const srps = new srp.Server(params, salt, Buffer.from(data.username), Buffer.from(user.password), key);
+                const srps = new srp.Server(params, salt, Buffer.from(data.username), Buffer.from(user!.password!), key);
                 session.srp = srps;
 
                 const payload = {
@@ -184,8 +187,8 @@ export default class Server {
             } else if (data.state === 3) {
                 console.log('Authenticate stage three');
 
-                const user = this.users.get(session.authenticating_user); // eslint-disable-line no-unused-vars
-                const srps = session.srp;
+                const user = this.users.get(session.authenticating_user!); // eslint-disable-line no-unused-vars
+                const srps = session.srp!;
 
                 srps.setA(data.publicKey);
 
@@ -193,7 +196,7 @@ export default class Server {
                     srps.checkM1(data.response); // throws error if wrong
                 } catch (err) {
                     console.error('Error checking password', err.message);
-                    session.socket.destroy();
+                    session.socket!.destroy();
                     return;
                 }
 
@@ -228,17 +231,17 @@ export default class Server {
         case 0x14: {
             console.log('Received get prop command');
 
-            let data = message.body;
+            let data = message.body!;
             const props: Property[] = [];
 
             // Read the requested props into an array of Propertys
             while (data.length) {
-                const prop_header = data.substr(0, ELEMENT_HEADER_SIZE);
+                const prop_header = data.slice(0, ELEMENT_HEADER_SIZE);
                 const prop_data = await Property.unpackHeader(prop_header);
                 const {name, size} = prop_data;
 
-                const value = data.substr(ELEMENT_HEADER_SIZE, size);
-                data = data.substr(ELEMENT_HEADER_SIZE + size);
+                const value = data.slice(ELEMENT_HEADER_SIZE, size);
+                data = data.slice(ELEMENT_HEADER_SIZE + size);
 
                 const prop = new Property(name, value);
 

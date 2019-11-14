@@ -92,7 +92,7 @@ QUnit.test('Parse raw command', async assert => {
     assert.equal(message.command, 20);
     assert.equal(message.error_code, 0);
     assert.equal(message.key.toString('hex'), '7a5c8b71ad6f324f0cac857d868ab5173e09c835f431657f3c9cb56d969aa507');
-    assert.equal(message.body.toString('hex'), '64627567000000000000000400000000');
+    assert.equal(message.body!.toString('hex'), '64627567000000000000000400000000');
     assert.equal(message.body_size, 16);
     assert.equal(message.body_checksum, 398655911);
 });

@@ -59,15 +59,15 @@ export class CFLBinaryPListComposer {
             data += object ? '\x09' : '\x08';
         } else if (typeof object === 'number' && object % 1 !== 0) {
             let string = '';
-            let size = null;
+            let size: string | number | null = null;
 
-            const sizes = {4: 'FloatBE', 8: 'DoubleBE'};
-            for (size of Object.keys(sizes)) {
+            const sizes: {[size: number]: 'writeFloatBE' | 'writeDoubleBE'} = {4: 'writeFloatBE', 8: 'writeDoubleBE'};
+            for (size of Object.keys(sizes) as string[]) {
                 size = parseInt(size);
 
                 try {
                     const buffer = Buffer.alloc(size);
-                    buffer['write' + sizes[size]](object, 0, size);
+                    buffer[sizes[size]](object, 0);
 
                     string = buffer.toString('binary');
                     break;
@@ -289,11 +289,11 @@ export class CFLBinaryPListParser {
         } else if (object_type === 0xd0) {
             // dict
 
-            const object = {};
+            const object: {[k: string]: any} = {};
 
             while (true) {
-                let key;
-                let value;
+                let key: string;
+                let value: any;
                 [key, data] = this.unpackObject(data, depth + 1);
 
                 if (key === null) break;

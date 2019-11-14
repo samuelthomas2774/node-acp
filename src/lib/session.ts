@@ -12,11 +12,11 @@ export default class Session extends EventEmitter {
     readonly port: number;
     readonly password: string;
 
-    socket: net.Socket = undefined;
-    buffer = '';
+    socket: net.Socket | null = null;
+    buffer = Buffer.alloc(0);
     reading = 0;
 
-    encryption: ClientEncryption | ServerEncryption;
+    encryption: ClientEncryption | ServerEncryption | null = null;
 
     /**
      * Creates a Session.
@@ -31,12 +31,6 @@ export default class Session extends EventEmitter {
         this.host = host;
         this.port = port;
         this.password = password;
-
-        this.socket = undefined;
-        this.buffer = '';
-        this.reading = 0;
-
-        this.encryption = undefined;
     }
 
     /**
@@ -63,7 +57,7 @@ export default class Session extends EventEmitter {
             });
 
             this.socket.on('close', had_error => {
-                this.socket = undefined;
+                this.socket = null;
                 this.emit('disconnected');
             });
 
@@ -77,7 +71,7 @@ export default class Session extends EventEmitter {
                     console.debug(0, 'Decrypted', data);
                 }
 
-                this.buffer += data.toString('binary');
+                this.buffer = Buffer.concat([this.buffer, data]);
 
                 this.emit('data', data);
             });
@@ -95,8 +89,8 @@ export default class Session extends EventEmitter {
         this.socket.end();
 
         return new Promise<void>((resolve, reject) => {
-            this.socket.on('close', () => {
-                this.socket = undefined;
+            this.socket!.on('close', () => {
+                this.socket = null;
                 this.emit('disconnected');
                 resolve();
             });
@@ -179,7 +173,7 @@ export default class Session extends EventEmitter {
 
         return new Promise<void>((resolve, reject) => {
             console.info(0, 'Sending data', data);
-            this.socket.write(data as Buffer, 'binary', err => {
+            this.socket!.write(data as Buffer, 'binary', err => {
                 if (err) reject(err);
                 else resolve();
             });
@@ -191,14 +185,14 @@ export default class Session extends EventEmitter {
      *
      * @param {number} size
      * @param {number} timeout (default is 10000 ms / 10 seconds)
-     * @return {Promise<string>}
+     * @return {Promise<Buffer>}
      */
     async receiveSize(size: number, timeout = 10000) {
         this.reading++;
 
         try {
-            const received_chunks = [this.buffer.substr(0, size)];
-            this.buffer = this.buffer.substr(size);
+            const received_chunks = [this.buffer.slice(0, size)];
+            this.buffer = this.buffer.slice(size);
             let waiting_for = size - received_chunks[0].length;
 
             let last_received_at = Date.now();
@@ -211,15 +205,15 @@ export default class Session extends EventEmitter {
                 await new Promise(r => setTimeout(r, 1));
 
                 if (this.buffer) {
-                    const received = this.buffer.substr(0, waiting_for);
+                    const received = this.buffer.slice(0, waiting_for);
                     waiting_for = waiting_for - received.length;
                     received_chunks.push(received);
-                    this.buffer = this.buffer.substr(received.length);
+                    this.buffer = this.buffer.slice(received.length);
                     last_received_at = Date.now();
                 }
             }
 
-            return received_chunks.join('');
+            return Buffer.concat(received_chunks);
         } finally {
             this.reading -= 1;
         }
