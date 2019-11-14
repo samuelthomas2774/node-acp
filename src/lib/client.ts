@@ -2,7 +2,7 @@
 import Session from './session';
 import Message, {HEADER_SIZE as MESSAGE_HEADER_SIZE} from './message';
 import Property, {HEADER_SIZE as ELEMENT_HEADER_SIZE} from './property';
-import {PropName} from './properties';
+import {PropName, PropTypes} from './properties';
 import CFLBinaryPList from './cflbinary';
 
 import crypto from 'crypto';
@@ -100,7 +100,7 @@ export default class Client {
      * Server: ...Property
      *
      * @param {Array} props
-     * @return {Array}
+     * @return {Property[]}
      */
     async getProperties(props: (Property | PropName)[]) {
         let payload = '';
@@ -121,7 +121,7 @@ export default class Client {
             throw new Error('Error ' + reply_header.error_code);
         }
 
-        const props_with_values = [];
+        const props_with_values: Property[] = [];
 
         while (true) {
             const prop_header = await this.receivePropertyElementHeader();
@@ -154,7 +154,7 @@ export default class Client {
     /**
      * Sets properties on the AirPort device.
      *
-     * @param {Array} props
+     * @param {Property[]} props
      */
     async setProperties(props: Property[]) {
         let payload = '';
@@ -195,13 +195,27 @@ export default class Client {
     /**
      * Gets the supported features on the AirPort device.
      *
-     * @return {Array}
+     * @return {Promise<Array>}
      */
     async getFeatures() {
         await this.send(Message.composeFeatCommand(0));
         const reply_header = await Message.parseRaw(await this.receiveMessageHeader());
         const reply = await this.receive(reply_header.body_size);
         return CFLBinaryPList.parse(reply);
+    }
+
+    async getLogs() {
+        const [prop] = await this.getProperties(['logm']) as Property<'logm'>[];
+        return prop.format();
+    }
+
+    /**
+     * Sends a reboot command.
+     *
+     * @return {Promise<void>}
+     */
+    reboot() {
+        return this.setProperties([new Property('acRB', 0)]);
     }
 
     async flashPrimary(payload) {

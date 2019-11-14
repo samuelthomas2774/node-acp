@@ -173,7 +173,7 @@ const ValueFormatters: {
     },
 }
 
-class Property<N extends PropName = any, T extends PropType = PropTypes[N], V extends SupportedValues[T] = Buffer | string> {
+class Property<N extends PropName = any, T extends PropType = PropTypes[N]> {
     readonly name?: N;
     readonly value?: Buffer;
 
@@ -183,7 +183,7 @@ class Property<N extends PropName = any, T extends PropType = PropTypes[N], V ex
      * @param {string} name
      * @param {string} value
      */
-    constructor(name?: N | '\0\0\0\0', value?: Buffer | string | V) {
+    constructor(name?: N | '\0\0\0\0', value?: Buffer | string | SupportedValues[T]) {
         if (name === '\x00\x00\x00\x00' && value === '\x00\x00\x00\x00') {
             name = undefined;
             value = undefined;
@@ -348,7 +348,7 @@ class Property<N extends PropName = any, T extends PropType = PropTypes[N], V ex
     }
 }
 
-interface Property<N extends PropName = any, T extends PropType = PropTypes[N], V extends SupportedValues[T] = Buffer | string> {
+interface Property<N extends PropName = any, T extends PropType = PropTypes[N]> {
     constructor: typeof Property;
 }
 

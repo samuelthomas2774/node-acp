@@ -98,7 +98,7 @@ interface ClientCommandArguments extends GlobalArguments {
     encryption?: boolean;
 }
 
-const commandHandler = <A extends ClientCommandArguments = GlobalArguments>(handler: (client: Client, argv: A) => void) => async (argv: A) => {
+const commandHandler = <A extends ClientCommandArguments = ClientCommandArguments>(handler: (client: Client, argv: A) => void) => async (argv: A) => {
     const client = new Client(argv.host || 'airport-base-station.local', argv.port, argv.password);
 
     try {
@@ -173,20 +173,26 @@ yargs.command('setprop <prop> <value>', 'Set an ACP property', yargs => {
     console.log(props);
 }));
 
-interface FeaturesArguments {
-    encryption: boolean;
-}
-
 yargs.command('features', 'Get supported features', yargs => {
     yargs.option('encryption', {
         describe: 'Whether to encrypt connections to the AirPort device',
         default: true,
         type: 'boolean',
     });
-}, commandHandler(async (client, argv: GlobalArguments & FeaturesArguments) => {
+}, commandHandler(async (client, argv: ClientCommandArguments) => {
     const features = await client.getFeatures();
 
     console.log(features);
+}));
+
+yargs.command('reboot', 'Reboot', yargs => {
+    yargs.option('encryption', {
+        describe: 'Whether to encrypt connections to the AirPort device',
+        default: true,
+        type: 'boolean',
+    });
+}, commandHandler(async (client, argv: ClientCommandArguments) => {
+    await client.reboot();
 }));
 
 // eslint-disable-next-line no-unused-vars
