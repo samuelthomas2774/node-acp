@@ -6,19 +6,27 @@ import CFLBinaryPList from './cflbinary';
 
 import crypto from 'crypto';
 
-import srp from 'fast-srp-hap';
+// eslint-disable-next-line no-unused-vars
+import srp, {SrpParams} from 'fast-srp-hap';
 import BigInteger from 'fast-srp-hap/lib/jsbn';
 
 export default class Client {
+    readonly host: string;
+    readonly port: number;
+    readonly password: string;
+
+    readonly session: Session;
+
+    private authenticating: Promise<void>;
+
     /**
      * Creates an ACP Client.
      *
      * @param {string} host
      * @param {number} port
      * @param {string} password
-     * @return {undefined}
      */
-    constructor(host, port, password) {
+    constructor(host: string, port: number, password: string) {
         this.host = host;
         this.port = port;
         this.password = password;
@@ -32,7 +40,7 @@ export default class Client {
      * @param {number} timeout
      * @return {Promise}
      */
-    connect(timeout) {
+    connect(timeout?: number) {
         return this.session.connect(timeout);
     }
 
@@ -51,7 +59,7 @@ export default class Client {
      * @param {Message|Buffer|string} data
      * @return {Promise}
      */
-    send(data) {
+    send(data: Message | Buffer | string) {
         return this.session.send(data);
     }
 
@@ -61,7 +69,7 @@ export default class Client {
      * @param {number} size
      * @return {Promise<string>}
      */
-    receive(size) {
+    receive(size: number) {
         return this.session.receive(size);
     }
 
@@ -93,7 +101,7 @@ export default class Client {
      * @param {Array} props
      * @return {Array}
      */
-    async getProperties(props) {
+    async getProperties(props: (Property | string)[]) {
         let payload = '';
 
         for (let name of props) {
@@ -109,7 +117,7 @@ export default class Client {
         console.log('Get prop response', reply_header);
 
         if (reply_header.error_code !== 0) {
-            throw new Error('Error ' . reply_header.error_code);
+            throw new Error('Error ' + reply_header.error_code);
         }
 
         const props_with_values = [];
@@ -146,9 +154,8 @@ export default class Client {
      * Sets properties on the AirPort device.
      *
      * @param {Array} props
-     * @return {undefined}
      */
-    async setProperties(props) {
+    async setProperties(props: Property[]) {
         let payload = '';
 
         for (let prop of props) {
@@ -198,7 +205,7 @@ export default class Client {
 
     async flashPrimary(payload) {
         this.send(Message.composeFlashPrimaryCommand(0, this.password, payload));
-        const reply_header = await Message.parseRaw(this.receiveMessageHeader());
+        const reply_header = await Message.parseRaw(await this.receiveMessageHeader());
         return await this.receive(reply_header.body_size);
     }
 
@@ -216,7 +223,7 @@ export default class Client {
         }
     }
 
-    async authenticateStageOne() {
+    private async authenticateStageOne() {
         /**
          * Stage 1 (client)
          *
@@ -252,11 +259,17 @@ export default class Client {
         return this.authenticateStageThree(data);
     }
 
-    async authenticateStageThree(data) {
+    private async authenticateStageThree(data: {
+        salt: Buffer;
+        generator: Buffer;
+        publicKey: Buffer;
+        modulus: Buffer;
+    }) {
         /**
          * Stage 3 (client)
          *
-         * Generate a public key (A) and use the password and salt to generate proof we know the password (M1), then send it to the server.
+         * Generate a public key (A) and use the password and salt to generate proof we know the password (M1),
+         * then send it to the server.
          */
 
         // data === {
@@ -270,7 +283,7 @@ export default class Client {
         // eslint-disable-next-line no-unused-vars
         const B = data.publicKey; // B.length === 192 (not 384)
 
-        const params = {
+        const params: SrpParams = {
             // 1536
             N_length_bits: 1536,
             N: new BigInteger(data.modulus),
@@ -310,7 +323,8 @@ export default class Client {
         /**
          * Stage 4 (server)
          *
-         * Use the client's public key (A) to verify the client's proof it knows the password (M1) and generate proof the server knows the password (M2).
+         * Use the client's public key (A) to verify the client's proof it knows the password (M1) and generate
+         * proof the server knows the password (M2).
          */
 
         const response = await this.session.receiveMessage();
@@ -326,7 +340,10 @@ export default class Client {
         return this.authenticateStageFive(srpc, iv, data_2);
     }
 
-    async authenticateStageFive(srpc, client_iv, data) {
+    private async authenticateStageFive(srpc: srp.Client, client_iv: Buffer, data: {
+        response: Buffer;
+        iv: Buffer;
+    }) {
         /**
          * Stage 5 (client)
          *

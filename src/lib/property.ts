@@ -2,8 +2,21 @@
 import CFLBinaryPList from './cflbinary';
 import acp_properties from './properties';
 
+interface PropData {
+    name: string;
+    type: 'str' | 'dec' | 'hex' | 'log' | 'mac' | 'cfb' | 'bin';
+    description: string;
+    validator: ((value: any, name: string) => boolean) | undefined;
+}
+
+interface HeaderData {
+    name: string;
+    flags: number;
+    size: number;
+}
+
 export function generateACPProperties() {
-    const props = [];
+    const props: PropData[] = [];
 
     for (let prop of acp_properties) {
         const [name, type, description, validator] = prop;
@@ -25,15 +38,17 @@ export const props = generateACPProperties();
 
 export const HEADER_SIZE = 12;
 
-export default class Property {
+class Property {
+    readonly name: string | undefined;
+    readonly value: any | undefined;
+
     /**
      * Creates a Property.
      *
      * @param {string} name
      * @param {string} value
-     * @return {undefined}
      */
-    constructor(name, value) {
+    constructor(name?: string, value?: any) {
         if (name === '\x00\x00\x00\x00' && value === '\x00\x00\x00\x00') {
             name = undefined;
             value = undefined;
@@ -61,7 +76,7 @@ export default class Property {
         this.value = value;
     }
 
-    __init_dec(value) {
+    __init_dec(value: number | string) {
         if (typeof value === 'number') {
             return value;
         } else if (typeof value === 'string') {
@@ -71,7 +86,7 @@ export default class Property {
         }
     }
 
-    __init_hex(value) {
+    __init_hex(value: number | string) {
         if (typeof value === 'number') {
             return value;
         } else if (typeof value === 'string') {
@@ -81,21 +96,21 @@ export default class Property {
         }
     }
 
-    __init_mac(value) {
+    __init_mac(value: string) {
         if (typeof value === 'string') {
             if (value.length === 6) return value;
 
             const mac_bytes = value.split(':');
 
             if (mac_bytes.length === 6) {
-                return Buffer.from(''.join(mac_bytes), 'hex').toString('binary');
+                return Buffer.from(mac_bytes.join(''), 'hex').toString('binary');
             }
         }
 
         throw new Error('Invalid mac value: ' + value);
     }
 
-    __init_bin(value) {
+    __init_bin(value: string) {
         if (typeof value === 'string') {
             return value;
         } else {
@@ -103,7 +118,7 @@ export default class Property {
         }
     }
 
-    __init_cfb(value) {
+    __init_cfb(value: string) {
         if (typeof value === 'string') {
             return value;
         } else {
@@ -111,7 +126,7 @@ export default class Property {
         }
     }
 
-    __init_log(value) {
+    __init_log(value: string) {
         if (typeof value === 'string') {
             return value;
         } else {
@@ -119,7 +134,7 @@ export default class Property {
         }
     }
 
-    __init_str(value) {
+    __init_str(value: string) {
         if (typeof value === 'string') {
             return value;
         } else {
@@ -143,15 +158,15 @@ export default class Property {
         return this[formatHandlerName](this.value);
     }
 
-    __format_dec(value) {
+    __format_dec(value: number) {
         return value.toString();
     }
 
-    __format_hex(value) {
+    __format_hex(value: number) {
         return '0x' + value.toString(16);
     }
 
-    __format_mac(value) {
+    __format_mac(value: string) {
         const mac_bytes = [];
         value = Buffer.from(value, 'binary').toString('hex');
 
@@ -162,19 +177,19 @@ export default class Property {
         return mac_bytes.join(':');
     }
 
-    __format_bin(value) {
+    __format_bin(value: string) {
         return Buffer.from(value, 'binary').toString('hex');
     }
 
-    __format_cfb(value) {
+    __format_cfb(value: string) {
         return CFLBinaryPList.parse(value);
     }
 
-    __format_log(value) {
+    __format_log(value: string) {
         return value.split('\x00').map(line => line.trim() + '\n').join('');
     }
 
-    __format_str(value) {
+    __format_str(value: string) {
         return Buffer.from(value, 'binary').toString('utf8');
     }
 
@@ -191,7 +206,7 @@ export default class Property {
         return props.map(prop => prop.name);
     }
 
-    static getPropertyInfoString(propName, key) {
+    static getPropertyInfoString<T extends keyof PropData>(propName: string, key: T): PropData[T] {
         if (!propName) return;
 
         const prop = props.find(p => p.name === propName);
@@ -215,7 +230,7 @@ export default class Property {
      * @param {string} data
      * @return {Property}
      */
-    static parseRawElement(data) {
+    static parseRawElement(data: string) {
         // eslint-disable-next-line no-unused-vars
         const {name, flags, size} = this.unpackHeader(data.substr(0, HEADER_SIZE));
 
@@ -230,7 +245,7 @@ export default class Property {
      * @param {Property} property
      * @return {string}
      */
-    static composeRawElement(flags, property) {
+    static composeRawElement(flags: number, property: Property) {
         const name = property.name ? property.name : '\x00\x00\x00\x00';
         const value = property.value ? property.value : '\x00\x00\x00\x00';
 
@@ -246,7 +261,7 @@ export default class Property {
         }
     }
 
-    static composeRawElementHeader(name, flags, size) {
+    static composeRawElementHeader(name: string, flags: number, size: number) {
         try {
             return this.packHeader({name, flags, size});
         } catch (err) {
@@ -261,7 +276,7 @@ export default class Property {
      * @param {object} header_data
      * @return {string}
      */
-    static packHeader(header_data) {
+    static packHeader(header_data: HeaderData) {
         const {name, flags, size} = header_data;
         const buffer = Buffer.alloc(12);
 
@@ -278,7 +293,7 @@ export default class Property {
      * @param {string} header_data
      * @return {object}
      */
-    static unpackHeader(header_data) {
+    static unpackHeader(header_data: string): HeaderData {
         if (header_data.length !== HEADER_SIZE) {
             throw new Error('Header data must be 12 characters');
         }
@@ -292,3 +307,9 @@ export default class Property {
         return {name, flags, size};
     }
 }
+
+interface Property {
+    constructor: typeof Property;
+}
+
+export default Property;

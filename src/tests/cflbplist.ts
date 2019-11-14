@@ -1,5 +1,5 @@
 
-const {default: CFLBinaryPList} = require('../dist/cflbinary');
+import {CFLBinaryPList} from '../index';
 
 const plist = Buffer.from('43464230d07070726f626c656d7300a00000454e4421', 'hex');
 

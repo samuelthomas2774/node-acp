@@ -6,8 +6,12 @@
 // description (required) is a short, one-line description of the property
 // validation (optional) is eval()d to verify the input value for setting a property
 
-// module.exports.default = [
-export default [
+type PropType = 'str' | 'dec' | 'hex' | 'log' | 'mac' | 'cfb' | 'bin';
+type Validator = (value: any, name: string) => boolean;
+
+type Prop = [string, PropType, string, Validator | undefined];
+
+const props: Prop[] = [
     ['buil', 'str', 'Build string?', undefined],
     ['DynS', 'cfb', 'DNS', undefined],
     // ['cfpf', '', '', undefined],
@@ -317,6 +321,7 @@ export default [
     ['seFl', 'bin', '????', undefined], // ????
     // ['nvVs', '', '', undefined],
     // ['dbRC', '', '', undefined],
+    // @ts-ignore
     ['dbug', 'hex', 'Debug flags', value => 0 <= value <= 0xffffffff],
     // ['dlvl', '', '', undefined],
     // ['dcmd', '', '', undefined],
@@ -367,6 +372,7 @@ export default [
     // ['Afrc', '', '', undefined],
     // ['lebl', '', '', undefined],
     // ['lebs', '', '', undefined],
+    // @ts-ignore
     ['LEDc', 'dec', 'LED color/pattern', value => 0 <= value <= 3],
     // ['acEf', '', '', undefined],
     // ['invr', '', '', undefined],
@@ -543,3 +549,5 @@ export default [
     // ['wcgs', '', '', undefined],
     // ['awcc', '', '', undefined],
 ];
+
+export default props;

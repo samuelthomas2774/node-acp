@@ -1,9 +1,8 @@
-const {default: Message, generateACPHeaderKey} = require('../dist/message');
+import Message, {generateACPHeaderKey} from '../lib/message';
+import 'qunit';
+import adler32 from 'adler32';
 
-const QUnit = require('qunit');
-const adler32 = require('adler32');
-
-QUnit.test('Pack header', function (assert) {
+QUnit.test('Pack header', assert => {
     const expected_hex = '61637070000300010000000000000000ffffffff000000040000000000000014000000000000000000000000000000007a5c8b71ad6f324f0cac857d868ab5173e09c835f431657f3c9cb56d969aa507000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
 
     const message = new Message(0x00030001, 4, 0, 0x14, 0, generateACPHeaderKey('testing'));
@@ -26,7 +25,7 @@ QUnit.test('Pack header', function (assert) {
     assert.equal(message_hex, expected_hex);
 });
 
-QUnit.test('Pack header with checksum', function (assert) {
+QUnit.test('Pack header with checksum', assert => {
     const expected_hex = '6163707000030001214613e500000000ffffffff000000040000000000000014000000000000000000000000000000007a5c8b71ad6f324f0cac857d868ab5173e09c835f431657f3c9cb56d969aa507000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
 
     const message = new Message(0x00030001, 4, 0, 0x14, 0, generateACPHeaderKey('testing'));
@@ -68,7 +67,7 @@ QUnit.test('Pack header with checksum', function (assert) {
     assert.equal(message_hex, expected_hex);
 });
 
-QUnit.test('Compose get prop command', function (assert) {
+QUnit.test('Compose get prop command', assert => {
     // Property.composeRawElement(0, new Property('dbug'))
     const payload_hex = '64627567000000000000000400000000';
     const payload = Buffer.from(payload_hex, 'hex').toString('binary');
@@ -81,7 +80,7 @@ QUnit.test('Compose get prop command', function (assert) {
     assert.equal(message_hex, expected_hex);
 });
 
-QUnit.test('Parse raw command', async function (assert) {
+QUnit.test('Parse raw command', async assert => {
     const raw_message_hex = '61637070000300011bef117b17c301a700000010000000040000000000000014000000000000000000000000000000007a5c8b71ad6f324f0cac857d868ab5173e09c835f431657f3c9cb56d969aa50700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000064627567000000000000000400000000';
     const raw_message = Buffer.from(raw_message_hex, 'hex').toString('binary');
 

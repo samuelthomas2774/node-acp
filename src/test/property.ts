@@ -1,8 +1,7 @@
-const {default: Property} = require('../dist/property');
+import {Property} from '../index';
+import 'qunit';
 
-const QUnit = require('qunit');
-
-QUnit.test('Compose raw element header', function (assert) {
+QUnit.test('Compose raw element header', assert => {
     const expected_hex = '646275670000000000000004';
 
     const header = Property.composeRawElementHeader('dbug', 0, 4);
@@ -11,7 +10,7 @@ QUnit.test('Compose raw element header', function (assert) {
     assert.equal(expected_hex, header_hex);
 });
 
-QUnit.test('Compose raw element', function (assert) {
+QUnit.test('Compose raw element', assert => {
     const expected_hex = '64627567000000000000000400000000';
 
     const raw_element = Property.composeRawElement(0, new Property('dbug'));
@@ -20,7 +19,7 @@ QUnit.test('Compose raw element', function (assert) {
     assert.equal(expected_hex, raw_element_hex);
 });
 
-QUnit.test('Parse raw element', async function (assert) {
+QUnit.test('Parse raw element', async assert => {
     const raw_element_hex = '64627567000000000000000400003000';
     const raw_element = Buffer.from(raw_element_hex, 'hex').toString('binary');
 

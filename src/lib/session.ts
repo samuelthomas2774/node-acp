@@ -8,15 +8,24 @@ import crypto from 'crypto';
 import EventEmitter from 'events';
 
 export default class Session extends EventEmitter {
+    readonly host: string;
+    readonly port: number;
+    readonly password: string;
+
+    socket: net.Socket = undefined;
+    buffer = '';
+    reading = 0;
+
+    encryption: ClientEncryption | ServerEncryption;
+
     /**
      * Creates a Session.
      *
      * @param {string} host
      * @param {number} port
      * @param {string} password
-     * @return {undefined}
      */
-    constructor(host, port, password) {
+    constructor(host: string, port: number, password: string) {
         super();
 
         this.host = host;
@@ -37,7 +46,7 @@ export default class Session extends EventEmitter {
      * @return {Promise}
      */
     connect(timeout = 10000) {
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
             this.socket = new net.Socket();
 
             setTimeout(() => {
@@ -45,7 +54,8 @@ export default class Session extends EventEmitter {
                 reject('Timeout');
             }, timeout);
 
-            this.socket.connect(this.port, this.host, err => {
+            // @ts-ignore
+            this.socket.connect(this.port, this.host, (err: any) => {
                 console.log('Connected', err);
                 this.emit('connected');
                 if (err) reject(err);
@@ -84,7 +94,7 @@ export default class Session extends EventEmitter {
 
         this.socket.end();
 
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
             this.socket.on('close', () => {
                 this.socket = undefined;
                 this.emit('disconnected');
@@ -99,12 +109,13 @@ export default class Session extends EventEmitter {
      * @param {number} timeout
      * @return {Promise<Message>}
      */
-    async receiveMessage(timeout) {
+    async receiveMessage(timeout?: number) {
         const raw_header = await this.receiveMessageHeader(timeout);
         const message = await Message.parseRaw(raw_header);
 
         const data = await this.receive(message.body_size);
 
+        // @ts-ignore
         message.body = data;
 
         return message;
@@ -116,7 +127,7 @@ export default class Session extends EventEmitter {
      * @param {number} timeout
      * @return {Promise<string>}
      */
-    receiveMessageHeader(timeout) {
+    receiveMessageHeader(timeout?: number) {
         return this.receive(MESSAGE_HEADER_SIZE, timeout);
     }
 
@@ -126,7 +137,7 @@ export default class Session extends EventEmitter {
      * @param {number} timeout
      * @return {Promise<string>}
      */
-    receivePropertyElementHeader(timeout) {
+    receivePropertyElementHeader(timeout?: number) {
         return this.receive(ELEMENT_HEADER_SIZE, timeout);
     }
 
@@ -138,7 +149,7 @@ export default class Session extends EventEmitter {
      * @param {number} timeout
      * @return {Promise<string>}
      */
-    async sendAndReceive(data, size, timeout = 10000) {
+    async sendAndReceive(data: Message | Buffer | string, size: number, timeout?: number) {
         await this.send(data);
 
         return await this.receive(size, timeout);
@@ -150,7 +161,7 @@ export default class Session extends EventEmitter {
      * @param {Message|Buffer|string} data
      * @return {Promise}
      */
-    send(data) {
+    send(data: Message | Buffer | string) {
         if (data instanceof Message) {
             data = data.composeRawPacket();
         }
@@ -166,9 +177,9 @@ export default class Session extends EventEmitter {
 
         if (!this.socket) return;
 
-        return new Promise((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
             console.info(0, 'Sending data', data);
-            this.socket.write(data, 'binary', err => {
+            this.socket.write(data as Buffer, 'binary', err => {
                 if (err) reject(err);
                 else resolve();
             });
@@ -182,7 +193,7 @@ export default class Session extends EventEmitter {
      * @param {number} timeout (default is 10000 ms / 10 seconds)
      * @return {Promise<string>}
      */
-    async receiveSize(size, timeout = 10000) {
+    async receiveSize(size: number, timeout = 10000) {
         this.reading++;
 
         try {
@@ -221,7 +232,7 @@ export default class Session extends EventEmitter {
      * @param {number} timeout
      * @return {Promise<string>}
      */
-    async receive(size, timeout = 10000) {
+    async receive(size: number, timeout?: number) {
         let data = await this.receiveSize(size, timeout);
 
         return data;
@@ -236,8 +247,23 @@ export default class Session extends EventEmitter {
     }
 }
 
-export class Encryption {
-    constructor(key, client_iv, server_iv) {
+interface EncryptionContext {
+    cipher: crypto.Cipher;
+    decipher: crypto.Decipher;
+}
+
+class Encryption {
+    readonly key: string;
+    readonly client_iv: string;
+    readonly server_iv: string;
+
+    readonly derived_client_key: Buffer;
+    readonly derived_server_key: Buffer;
+
+    readonly client_context: EncryptionContext;
+    readonly server_context: EncryptionContext;
+
+    constructor(key: string, client_iv: string, server_iv: string) {
         this.key = key;
         this.client_iv = client_iv;
         this.server_iv = server_iv;
@@ -252,49 +278,55 @@ export class Encryption {
         this.server_context = this.constructor.createEncryptionContext(derived_server_key, server_iv);
     }
 
-    static createEncryptionContext(key, iv) {
+    static createEncryptionContext(key: Buffer, iv: string) {
         return {
             cipher: crypto.createCipheriv('aes-128-ctr', key, iv),
             decipher: crypto.createDecipheriv('aes-128-ctr', key, iv),
         };
     }
 
-    clientEncrypt(data) {
+    clientEncrypt(data: Buffer) {
         return this.client_context.cipher.update(data);
     }
 
-    clientDecrypt(data) {
+    clientDecrypt(data: Buffer) {
         return this.client_context.decipher.update(data);
     }
 
-    serverEncrypt(data) {
+    serverEncrypt(data: Buffer) {
         return this.server_context.cipher.update(data);
     }
 
-    serverDecrypt(data) {
+    serverDecrypt(data: Buffer) {
         return this.server_context.decipher.update(data);
     }
 }
+
+interface Encryption {
+    constructor: typeof Encryption;
+}
+
+export {Encryption};
 
 const PBKDF_salt0 = Buffer.from('F072FA3F66B410A135FAE8E6D1D43D5F', 'hex');
 const PBKDF_salt1 = Buffer.from('BD0682C9FE79325BC73655F4174B996C', 'hex');
 
 export class ClientEncryption extends Encryption {
-    encrypt(data) {
+    encrypt(data: Buffer) {
         return this.clientEncrypt(data);
     }
 
-    decrypt(data) {
+    decrypt(data: Buffer) {
         return this.serverDecrypt(data);
     }
 }
 
 export class ServerEncryption extends Encryption {
-    encrypt(data) {
+    encrypt(data: Buffer) {
         return this.serverEncrypt(data);
     }
 
-    decrypt(data) {
+    decrypt(data: Buffer) {
         return this.clientDecrypt(data);
     }
 }

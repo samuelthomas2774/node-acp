@@ -1,9 +1,8 @@
-const {generateACPHeaderKey} = require('../dist/message');
-const {generateACPKeystream} = require('../dist/keystream');
+import {generateACPHeaderKey} from '../lib/message';
+import {generateACPKeystream} from '../lib/keystream';
+import 'qunit';
 
-const QUnit = require('qunit');
-
-QUnit.test('Generate keystream', function (assert) {
+QUnit.test('Generate keystream', assert => {
     const expected_hex = '0e39f805c401554f0cac857d868ab5173e09c835';
 
     const key = generateACPKeystream(20);
@@ -12,7 +11,7 @@ QUnit.test('Generate keystream', function (assert) {
     assert.equal(expected_hex, key_hex);
 });
 
-QUnit.test('Generate message header key', function (assert) {
+QUnit.test('Generate message header key', assert => {
     const expected_hex = '7a5c8b71ad6f324f0cac857d868ab5173e09c835f431657f3c9cb56d969aa507';
 
     const key = generateACPHeaderKey('testing');

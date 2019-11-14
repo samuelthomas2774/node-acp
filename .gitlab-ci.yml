@@ -20,11 +20,11 @@ build:
 
 test:
     script:
-        - npx qunit
+        - npx qunit dist/test/**.js
 
 lint:
     script:
-        - npx eslint src test tests
+        - npx eslint src/**/*.ts
 
 publish:
     stage: deploy

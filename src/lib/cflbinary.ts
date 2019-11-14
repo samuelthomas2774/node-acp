@@ -11,7 +11,7 @@ export default class CFLBinaryPList {
      * @param {*} object
      * @return {string} data
      */
-    static compose(object) {
+    static compose(object: any) {
         return CFLBinaryPListComposer.compose(object);
     }
 
@@ -21,7 +21,7 @@ export default class CFLBinaryPList {
      * @param {string} data
      * @return {*}
      */
-    static parse(data) {
+    static parse(data: string) {
         return CFLBinaryPListParser.parse(data);
     }
 }
@@ -33,7 +33,7 @@ export class CFLBinaryPListComposer {
      * @param {*} object
      * @return {string} data
      */
-    static compose(object) {
+    static compose(object: any) {
         let data = HEADER_MAGIC;
 
         data += this.packObject(object);
@@ -50,7 +50,7 @@ export class CFLBinaryPListComposer {
      * @param {number} depth
      * @return {string} data
      */
-    static packObject(object, depth = 1) {
+    static packObject(object: any, depth = 1) {
         let data = '';
 
         if (object === undefined || object === null) {
@@ -80,7 +80,7 @@ export class CFLBinaryPListComposer {
                 throw new Error('Unsupported real size');
             }
 
-            const marker = 0x20 + parseInt(Math.log2(string.length));
+            const marker = 0x20 + Math.log2(string.length);
 
             data += String.fromCharCode(marker);
             data += string;
@@ -107,7 +107,7 @@ export class CFLBinaryPListComposer {
                 throw new Error('Unsupported int size');
             }
 
-            const marker = 0x10 + parseInt(Math.log2(string.length));
+            const marker = 0x10 + Math.log2(string.length);
 
             data += String.fromCharCode(marker);
             data += string;
@@ -127,7 +127,7 @@ export class CFLBinaryPListComposer {
         } else if (typeof object === 'object' && object instanceof Array || object instanceof Set) {
             data += '\xa0';
 
-            for (let element of object) {
+            for (let element of object as any[]) {
                 data += this.packObject(element, depth + 1);
             }
 
@@ -135,7 +135,7 @@ export class CFLBinaryPListComposer {
         } else if (typeof object === 'object' && object instanceof Map) {
             data += '\xd0';
 
-            for (let [key, value] of object.entries()) {
+            for (let [key, value] of object.entries() as unknown as [any, any][]) {
                 data += this.packObject(key, depth + 1);
                 data += this.packObject(value, depth + 1);
             }
@@ -167,7 +167,7 @@ export class CFLBinaryPListParser {
      * @param {string} data
      * @return {*}
      */
-    static parse(data) {
+    static parse(data: string) {
         if (data.length < HEADER_SIZE + FOOTER_SIZE + 1) {
             throw new Error('Not enough data to parse');
         }
@@ -197,7 +197,7 @@ export class CFLBinaryPListParser {
      * @param {number} depth
      * @return {Array}
      */
-    static unpackObject(data, depth = 1) {
+    static unpackObject(data: string, depth = 1): [any, string] {
         if (depth > 10) {
             throw new Error('Max depth reached');
         }
@@ -313,7 +313,7 @@ export class CFLBinaryPListParser {
      * @param {string} data
      * @return {Array}
      */
-    static unpackObjectMarker(data) {
+    static unpackObjectMarker(data: string): [number, string] {
         const marker_byte = data.substr(0, 1);
 
         const marker = Buffer.from(marker_byte, 'binary').readInt8(0);
@@ -328,7 +328,7 @@ export class CFLBinaryPListParser {
      * @param {string} data
      * @return {Array}
      */
-    static unpackInt(size_exponent, data) {
+    static unpackInt(size_exponent: number, data: string): [number, string] {
         const int_size = 2 ** size_exponent;
         const int_bytes = data.substr(0, int_size);
         data = data.substr(int_size);
@@ -343,7 +343,7 @@ export class CFLBinaryPListParser {
      * @param {string} data
      * @return {Array}
      */
-    static unpackReal(size_exponent, data) {
+    static unpackReal(size_exponent: number, data: string): [number, string] {
         const real_size = 2 ** size_exponent;
         const real_bytes = data.substr(0, real_size);
         data = data.substr(real_size);
@@ -364,7 +364,7 @@ export class CFLBinaryPListParser {
      * @param {string} data
      * @return {Array}
      */
-    static unpackCount(object_info, data) {
+    static unpackCount(object_info: number, data: string): [number, string] {
         if (object_info === 0x0f) {
             // Count is the following packed int object
 

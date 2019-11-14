@@ -1,5 +1,6 @@
 module.exports = {
     extends: 'google',
+    parser: '@typescript-eslint/parser',
     parserOptions: {
         ecmaVersion: 8,
         sourceType: 'module',

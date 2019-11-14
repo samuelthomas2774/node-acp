@@ -1,5 +1,5 @@
 
-const {default: Client} = require('..');
+import Client from '../index';
 
 const client = new Client('192.168.2.251', 5009, 'testing');
 

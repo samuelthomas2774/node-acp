@@ -6,17 +6,27 @@ import CFLBinaryPList from './cflbinary';
 
 import net from 'net';
 import crypto from 'crypto';
-import srp from 'fast-srp-hap';
+import * as srp from 'fast-srp-hap';
 
 export default class Server {
-    constructor(host, port) {
+    readonly host: string;
+    readonly port: number;
+
+    password: string = null;
+    readonly users = new Map<string, {
+        params: srp.SrpParams;
+        salt: Buffer;
+        verifier: Buffer;
+        password?: string;
+    }>();
+
+    socket: net.Server = null;
+
+    private reading: number;
+
+    constructor(host: string, port: number) {
         this.host = host;
         this.port = port;
-
-        this.password = null;
-        this.users = new Map();
-
-        this.socket = undefined;
     }
 
     /**
@@ -27,8 +37,10 @@ export default class Server {
      * @param {Buffer} [salt] Must be 16 bytes
      * @param {object} [params] srp.params[1536]
      */
-    async addUser(username, password, salt, params) {
-        if (username === 'admin') this.password = password;
+    async addUser(username: string, password: string): Promise<void>;
+    async addUser(username: string, verifier: Buffer, salt?: Buffer, params?: srp.SrpParams): Promise<void>;
+    async addUser(username: string, password: Buffer | string, salt?: Buffer, params?: srp.SrpParams) {
+        if (username === 'admin') this.password = password instanceof Buffer ? password.toString() : password;
 
         // The verifier isn't actually used as fast-srp-hap doesn't accept verifiers
         // const salt = await new Promise((rs, rj) => srp.genKey(16, (err, secret2) => err ? rj(err) : rs(secret2)));
@@ -37,18 +49,19 @@ export default class Server {
         const verifier = password instanceof Buffer ? password :
             srp.computeVerifier(params, salt, Buffer.from(username), Buffer.from(password));
 
-        this.users.set(username, {params, salt, verifier, password});
+        this.users.set(username, {params, salt, verifier, password: typeof password === 'string' ? password : null});
     }
 
-    listen(_timeout) {
+    listen(timeout?: number) {
         return new Promise((resolve, reject) => {
             this.socket = new net.Server();
 
             setTimeout(() => {
                 this.reading -= 1;
                 reject('Timeout');
-            }, _timeout);
+            }, timeout);
 
+            // @ts-ignore
             this.socket.listen(this.port, this.host, err => {
                 console.log('Listening', this.host, this.port, err);
                 if (err) reject(err);
@@ -68,7 +81,7 @@ export default class Server {
     close() {
         if (!this.socket) return;
 
-        this.socket.end();
+        this.socket.close();
 
         return new Promise((resolve, reject) => {
             this.socket.on('close', resolve);
@@ -242,7 +255,8 @@ export default class Server {
 
             let i = 0;
             for (let prop of ret) {
-                await session.send(Property.composeRawElement(0, prop instanceof Property ? prop : new Property(props[i].name, prop)));
+                await session.send(Property.composeRawElement(0,
+                    prop instanceof Property ? prop : new Property(props[i].name, prop)));
                 i++;
             }
 

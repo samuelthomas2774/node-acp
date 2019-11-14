@@ -1,14 +1,20 @@
 #!/usr/bin/env node
 
-import Client from './client';
-import Server from './server';
-import Property from './property';
+import Client from '../lib/client';
+import Server from '../lib/server';
+import Property from '../lib/property';
 
 import yargs from 'yargs';
 import bonjour from 'bonjour';
 
 yargs.demandCommand();
 yargs.help();
+
+interface GlobalArguments {
+    host?: string;
+    port: number;
+    password?: string;
+}
 
 yargs.option('host', {
     alias: 'h',
@@ -28,6 +34,13 @@ yargs.command('version', 'Shows the node-acp version', () => {}, argv => {
     console.log('https://gitlab.fancy.org.uk/samuel/node-acp');
 });
 
+interface ServerArguments {
+    advertise: boolean;
+    'advertise-name': string;
+    'advertise-network': string;
+    'advertise-address': string;
+}
+
 yargs.command('server', 'Start the ACP server', yargs => {
     yargs.option('advertise', {
         describe: 'Whether to advertise the ACP server with DNS SD',
@@ -45,7 +58,7 @@ yargs.command('server', 'Start the ACP server', yargs => {
         describe: 'The MAC address to advertise',
         default: '00-00-00-00-00-00',
     });
-}, async argv => {
+}, async (argv: GlobalArguments & ServerArguments) => {
     const server = new Server(argv.host || '::', argv.port);
 
     await server.addUser('admin', argv.password);
@@ -85,7 +98,11 @@ yargs.command('server', 'Start the ACP server', yargs => {
     }
 });
 
-const commandHandler = handler => async argv => {
+interface ClientCommandArguments extends GlobalArguments {
+    encryption?: boolean;
+}
+
+const commandHandler = <A extends ClientCommandArguments = GlobalArguments>(handler: (client: Client, argv: A) => void) => async (argv: A) => {
     const client = new Client(argv.host || 'airport-base-station.local', argv.port, argv.password);
 
     try {
@@ -106,7 +123,7 @@ const commandHandler = handler => async argv => {
     process.exit();
 };
 
-yargs.command('authenticate', 'Authenticate', yargs => {}, commandHandler(async (client, argv) => {
+yargs.command('authenticate', 'Authenticate', yargs => {}, commandHandler(async (client, argv: GlobalArguments) => {
     const data = await client.authenticate();
 
     console.log('Authenticated!', data);
@@ -117,6 +134,11 @@ yargs.command('authenticate', 'Authenticate', yargs => {}, commandHandler(async 
     console.log(props[0].format());
 }));
 
+interface GetPropArguments {
+    prop: string;
+    encryption: boolean;
+}
+
 yargs.command('getprop <prop>', 'Get an ACP property', yargs => {
     yargs.positional('prop', {
         describe: 'The name of the ACP property',
@@ -126,11 +148,17 @@ yargs.command('getprop <prop>', 'Get an ACP property', yargs => {
         default: true,
         type: 'boolean',
     });
-}, commandHandler(async (client, argv) => {
+}, commandHandler(async (client, argv: GlobalArguments & SetPropArguments) => {
     const props = await client.getProperties([argv.prop]);
 
     console.log(props[0].format());
 }));
+
+interface SetPropArguments {
+    prop: string;
+    value: string;
+    encryption: boolean;
+}
 
 yargs.command('setprop <prop> <value>', 'Set an ACP property', yargs => {
     yargs.positional('prop', {
@@ -143,11 +171,15 @@ yargs.command('setprop <prop> <value>', 'Set an ACP property', yargs => {
         default: true,
         type: 'boolean',
     });
-}, commandHandler(async (client, argv) => {
+}, commandHandler(async (client, argv: GlobalArguments & SetPropArguments) => {
     const props = await client.setProperties([new Property(argv.prop, argv.value)]);
 
     console.log(props);
 }));
+
+interface FeaturesArguments {
+    encryption: boolean;
+}
 
 yargs.command('features', 'Get supported features', yargs => {
     yargs.option('encryption', {
@@ -155,7 +187,7 @@ yargs.command('features', 'Get supported features', yargs => {
         default: true,
         type: 'boolean',
     });
-}, commandHandler(async (client, argv) => {
+}, commandHandler(async (client, argv: GlobalArguments & FeaturesArguments) => {
     const features = await client.getFeatures();
 
     console.log(features);

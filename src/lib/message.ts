@@ -7,6 +7,21 @@ import {generateACPKeystream} from './keystream';
 
 import adler32 from 'adler32';
 
+interface HeaderData {
+    magic: string;
+    version: number;
+    header_checksum: number;
+    body_checksum: number;
+    body_size: number;
+    flags: number;
+    unused: number;
+    command: number;
+    error_code: number;
+    key: string;
+    pad1?: string;
+    pad2?: string;
+}
+
 /**
  * Encrypt password for ACP message header key field.
  * Truncates the password at 0x20 bytes, not sure if this is the right thing to use in all cases.
@@ -14,7 +29,7 @@ import adler32 from 'adler32';
  * @param {string} password Base station password
  * @return {string} Encrypted password of proper length for the header field
  */
-export function generateACPHeaderKey(password) {
+export function generateACPHeaderKey(password: string) {
     const password_length = 0x20;
     const password_key = generateACPKeystream(password_length);
 
@@ -31,7 +46,17 @@ export function generateACPHeaderKey(password) {
 export const HEADER_MAGIC = 'acpp';
 export const HEADER_SIZE = 128;
 
-export default class Message {
+class Message {
+    readonly version: number;
+    readonly flags: number;
+    readonly unused: number;
+    readonly command: number;
+    readonly error_code: number;
+    readonly key: string;
+    readonly body: string | undefined;
+    readonly body_size: number;
+    readonly body_checksum: number;
+
     /**
      * Creates a Message.
      *
@@ -43,9 +68,8 @@ export default class Message {
      * @param {string} key
      * @param {string} body
      * @param {number} body_size
-     * @return {undefined}
      */
-    constructor(version, flags, unused, command, error_code, key, body, body_size) {
+    constructor(version: number, flags: number, unused: number, command: number, error_code: number, key: string, body?: string, body_size?: number) {
         this.version = version;
         this.flags = flags;
         this.unused = unused;
@@ -81,7 +105,7 @@ export default class Message {
      * @param {string} header_data
      * @return {object}
      */
-    static unpackHeader(header_data) {
+    static unpackHeader(header_data: string): HeaderData {
         if (header_data.length !== HEADER_SIZE) {
             throw new Error('Header data must be 128 bytes');
         }
@@ -110,7 +134,7 @@ export default class Message {
      * @param {object} header_data
      * @return {string}
      */
-    static packHeader(header_data) {
+    static packHeader(header_data: HeaderData) {
         const {magic, version, header_checksum, body_checksum, body_size, flags, unused, command, error_code, key, pad1 = '', pad2 = ''} = header_data;
         const buffer = Buffer.alloc(128);
 
@@ -137,7 +161,9 @@ export default class Message {
      * @param {boolean} return_remaining Whether to return any additional data
      * @return {Message|Array}
      */
-    static parseRaw(data, return_remaining) {
+    static parseRaw(data: string, return_remaining: true): [Message, string]
+    static parseRaw(data: string, return_remaining?: boolean): Message
+    static parseRaw(data: string, return_remaining = false): [Message, string] | Message {
         if (data.length < HEADER_SIZE) {
             throw new Error(`Need to pass at least ${HEADER_SIZE} bytes`);
         }
@@ -201,51 +227,51 @@ export default class Message {
         return message;
     }
 
-    static composeEchoCommand(flags, password, payload) {
+    static composeEchoCommand(flags: number, password: string, payload?: string) {
         return new Message(0x00030001, flags, 0, 1, 0, generateACPHeaderKey(password), payload);
     }
 
-    static composeFlashPrimaryCommand(flags, password, payload) {
+    static composeFlashPrimaryCommand(flags: number, password: string, payload?: string) {
         return new Message(0x00030001, flags, 0, 3, 0, generateACPHeaderKey(password), payload);
     }
 
-    static composeFlashSecondaryCommand(flags, password, payload) {
+    static composeFlashSecondaryCommand(flags: number, password: string, payload?: string) {
         return new Message(0x00030001, flags, 0, 5, 0, generateACPHeaderKey(password), payload);
     }
 
-    static composeFlashBootloaderCommand(flags, password, payload) {
+    static composeFlashBootloaderCommand(flags: number, password: string, payload?: string) {
         return new Message(0x00030001, flags, 0, 6, 0, generateACPHeaderKey(password), payload);
     }
 
-    static composeGetPropCommand(flags, password, payload) {
+    static composeGetPropCommand(flags: number, password: string, payload?: string) {
         return new Message(0x00030001, flags, 0, 0x14, 0, generateACPHeaderKey(password), payload);
     }
 
-    static composeSetPropCommand(flags, password, payload) {
+    static composeSetPropCommand(flags: number, password: string, payload?: string) {
         return new Message(0x00030001, flags, 0, 0x15, 0, generateACPHeaderKey(password), payload);
     }
 
-    static composePerformCommand(flags, password, payload) {
+    static composePerformCommand(flags: number, password: string, payload?: string) {
         return new Message(0x00030001, flags, 0, 0x16, 0, generateACPHeaderKey(password), payload);
     }
 
-    static composeMonitorCommand(flags, password, payload) {
+    static composeMonitorCommand(flags: number, password: string, payload?: string) {
         return new Message(0x00030001, flags, 0, 0x18, 0, generateACPHeaderKey(password), payload);
     }
 
-    static composeRPCCommand(flags, password, payload) {
+    static composeRPCCommand(flags: number, password: string, payload?: string) {
         return new Message(0x00030001, flags, 0, 0x19, 0, generateACPHeaderKey(password), payload);
     }
 
-    static composeAuthCommand(flags, payload) {
+    static composeAuthCommand(flags: number, payload?: string) {
         return new Message(0x00030001, flags, 0, 0x1a, 0, generateACPHeaderKey(''), payload);
     }
 
-    static composeFeatCommand(flags, payload) {
+    static composeFeatCommand(flags: number, payload?: string) {
         return new Message(0x00030001, flags, 0, 0x1b, 0, generateACPHeaderKey(''), payload);
     }
 
-    static composeMessageEx(version, flags, unused, command, error_code, password, payload, payload_size) {
+    static composeMessageEx(version: number, flags: number, unused: number, command: number, error_code: number, password: string, payload?: string, payload_size?: number) {
         return new Message(version, flags, unused, command, error_code, generateACPHeaderKey(password), payload, payload_size);
     }
 
@@ -294,3 +320,9 @@ export default class Message {
         return HEADER_SIZE;
     }
 }
+
+interface Message {
+    constructor: typeof Message;
+}
+
+export default Message;
