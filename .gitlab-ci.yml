@@ -51,10 +51,15 @@ test:
 firmware-test:
     stage: test
     script:
-        - PATH=`pwd`/bin:$PATH npx scripts/test-firmware-115-7.8.1.sh
-        - PATH=`pwd`/bin:$PATH npx scripts/test-firmware-120-7.9.1.sh
+        - PATH=`pwd`/bin:$PATH scripts/test-firmware-115-7.8.1.sh
+        - PATH=`pwd`/bin:$PATH scripts/test-firmware-120-7.9.1.sh
     dependencies:
         - build
+    cache:
+        paths:
+            - node_modules/
+            - _test/
+        policy: pull-push
 
 lint:
     stage: test
