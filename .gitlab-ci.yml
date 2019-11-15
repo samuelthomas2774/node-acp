@@ -41,6 +41,7 @@ build:
 test:
     stage: test
     script:
+        - npm install
         - npx qunit dist/test/**.js
     except:
         variables:
@@ -51,6 +52,7 @@ test:
 firmware-test:
     stage: test
     script:
+        - npm install
         - PATH=`pwd`/bin:$PATH scripts/test-firmware-115-7.8.1.sh
         - PATH=`pwd`/bin:$PATH scripts/test-firmware-120-7.9.1.sh
     dependencies:
@@ -64,7 +66,8 @@ firmware-test:
 lint:
     stage: test
     script:
-        - node_modules/.bin/eslint --color src/**/*.ts
+        - npm install
+        - npx eslint --color src/**/*.ts
     only:
         changes:
             - .gitlab-ci.yml
