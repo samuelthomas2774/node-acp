@@ -33,6 +33,7 @@ then
     EXIT=$? ; if [ "$EXIT" != 0 ] ; then rm test.basebinary ; exit $EXIT ; fi
 
     HASH=`cat test.basebinary | openssl dgst -sha256`
+    echo "$HASH"
 
     if [ "$HASH" != "$FIRMWARE_HASH" ]
     then
