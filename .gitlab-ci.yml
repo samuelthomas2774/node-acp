@@ -29,6 +29,7 @@ build:
             - package-lock.json
             - tsconfig.json
             - src/**/*
+            - types/**/*
     except:
         variables:
             - $NPM_AUDIT_SCHEDULE_SKIP_BUILD
@@ -43,6 +44,12 @@ test:
     script:
         - npm install
         - npx qunit dist/test/**.js
+    only:
+        changes:
+            - .gitlab-ci.yml
+            - package-lock.json
+            - tsconfig.json
+            - src/**/*
     except:
         variables:
             - $NPM_AUDIT_SCHEDULE_SKIP_BUILD
