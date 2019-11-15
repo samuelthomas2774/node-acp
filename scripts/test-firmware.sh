@@ -16,7 +16,7 @@ if [ -f test.basebinary ]
 then
     HASH=`cat test.basebinary | openssl dgst -sha256`
 
-    if [ "$HASH" != "$FIRMWARE_HASH" ]
+    if [ "$HASH" != "$FIRMWARE_HASH" ] && [ "$HASH" != "(stdin)= $FIRMWARE_HASH" ]
     then
         rm test.basebinary
         echo "Deleting existing downloaded firmware file: invalid hash"
@@ -35,7 +35,7 @@ then
     HASH=`cat test.basebinary | openssl dgst -sha256`
     echo "$HASH"
 
-    if [ "$HASH" != "$FIRMWARE_HASH" ]
+    if [ "$HASH" != "$FIRMWARE_HASH" ] && [ "$HASH" != "(stdin)= $FIRMWARE_HASH" ]
     then
         rm test.basebinary
         echo "Failed to download firmware file for testing: invalid hash"
@@ -55,7 +55,7 @@ then
 
     HASH=`cat decrypted-1.basebinary | openssl dgst -sha256`
 
-    if [ "$HASH" != "$DECRYPT_1_HASH" ]
+    if [ "$HASH" != "$DECRYPT_1_HASH" ] && [ "$HASH" != "(stdin)= $DECRYPT_!_HASH" ]
     then
         rm decrypted-1.basebinary
         echo "Failed to decrypt firmware file (s. 1): invalid hash"
@@ -77,7 +77,7 @@ then
 
     HASH=`cat decrypted-1-buffered.basebinary | openssl dgst -sha256`
 
-    if [ "$HASH" != "$DECRYPT_1_HASH" ]
+    if [ "$HASH" != "$DECRYPT_1_HASH" ] && [ "$HASH" != "(stdin)= $FIRMWARE_HASH" ]
     then
         rm decrypted-1-buffered.basebinary
         echo "Failed to decrypt firmware file (s. 1, buffered): invalid hash"
@@ -99,7 +99,7 @@ then
 
     HASH=`cat decrypted-2.basebinary | openssl dgst -sha256`
 
-    if [ "$HASH" != "$DECRYPT_2_HASH" ]
+    if [ "$HASH" != "$DECRYPT_2_HASH" ] && [ "$HASH" != "(stdin)= $DECRYPT_2_HASH" ]
     then
         rm decrypted-2.basebinary
         echo "Failed to decrypt firmware file (s. 2): invalid hash"
@@ -121,7 +121,7 @@ then
 
     HASH=`cat decrypted-2-buffered.basebinary | openssl dgst -sha256`
 
-    if [ "$HASH" != "$DECRYPT_2_HASH" ]
+    if [ "$HASH" != "$DECRYPT_2_HASH" ] && [ "$HASH" != "(stdin)= $DECRYPT_2_HASH" ]
     then
         rm decrypted-2-buffered.basebinary
         echo "Failed to decrypt firmware file (s. 2, buffered): invalid hash"
@@ -143,7 +143,7 @@ then
 
     HASH=`cat extracted.basebinary | openssl dgst -sha256`
 
-    if [ "$HASH" != "$EXTRACT_HASH" ]
+    if [ "$HASH" != "$EXTRACT_HASH" ] && [ "$HASH" != "(stdin)= $EXTRACT_HASH" ]
     then
         rm extracted.basebinary
         echo "Failed to extract gzimg: invalid hash"
@@ -165,7 +165,7 @@ then
 
     HASH=`cat extracted-buffered.basebinary | openssl dgst -sha256`
 
-    if [ "$HASH" != "$EXTRACT_HASH" ]
+    if [ "$HASH" != "$EXTRACT_HASH" ] && [ "$HASH" != "(stdin)= $EXTRACT_HASH" ]
     then
         rm extracted-buffered.basebinary
         echo "Failed to extract gzimg (buffered): invalid hash"
