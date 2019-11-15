@@ -55,7 +55,7 @@ then
 
     HASH=`cat decrypted-1.basebinary | openssl dgst -sha256`
 
-    if [ "$HASH" != "$DECRYPT_1_HASH" ] && [ "$HASH" != "(stdin)= $DECRYPT_!_HASH" ]
+    if [ "$HASH" != "$DECRYPT_1_HASH" ] && [ "$HASH" != "(stdin)= $DECRYPT_1_HASH" ]
     then
         rm decrypted-1.basebinary
         echo "Failed to decrypt firmware file (s. 1): invalid hash"
@@ -77,7 +77,7 @@ then
 
     HASH=`cat decrypted-1-buffered.basebinary | openssl dgst -sha256`
 
-    if [ "$HASH" != "$DECRYPT_1_HASH" ] && [ "$HASH" != "(stdin)= $FIRMWARE_HASH" ]
+    if [ "$HASH" != "$DECRYPT_1_HASH" ] && [ "$HASH" != "(stdin)= $DECRYPT_1_HASH" ]
     then
         rm decrypted-1-buffered.basebinary
         echo "Failed to decrypt firmware file (s. 1, buffered): invalid hash"
