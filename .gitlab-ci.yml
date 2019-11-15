@@ -12,28 +12,128 @@ cache:
 build:
     stage: build
     script:
-        - npm install
+        - npm --color="always" install
         - npx tsc
+
+        - PACKAGE_PATH=`npm --color="always" pack`
+        - mv $PACKAGE_PATH node-acp-release.tgz
     artifacts:
         paths:
             - dist
+            - node-acp-release.tgz
+    only:
+        changes:
+            - .gitlab-ci.yml
+            - package-lock.json
+            - tsconfig.json
+            - src/**/*
+    except:
+        variables:
+            - $NPM_AUDIT_SCHEDULE_SKIP_BUILD
 
 test:
+    stage: test
     script:
         - npx qunit dist/test/**.js
+    except:
+        variables:
+            - $NPM_AUDIT_SCHEDULE_SKIP_BUILD
+    dependencies:
+        - build
+    cache:
+        paths:
+            - node_modules/
+        policy: pull
+
+firmware-test:
+    stage: test
+    script:
+        - PATH=`pwd`/bin:$PATH npx
+    dependencies:
+        - build
+    cache:
+        paths:
+            - node_modules/
+        policy: pull
 
 lint:
+    stage: test
     script:
-        - npx eslint src/**/*.ts
+        - npx eslint --color src/**/*.ts
+    only:
+        changes:
+            - .gitlab-ci.yml
+            - package-lock.json
+            - .eslintrc.js
+            - src/**/*.ts
+    except:
+        variables:
+            - $NPM_AUDIT_SCHEDULE_SKIP_BUILD
+    dependencies: []
+    cache:
+        paths:
+            - node_modules/
+        policy: pull
 
-publish:
+audit:
+    stage: test
+    script:
+        - npm audit --json > npm-audit.json || true
+        - npm --color="always" audit
+    artifacts:
+        paths:
+            - npm-audit.json
+        when: always
+    only:
+        changes:
+            - .gitlab-ci.yml
+            - package-lock.json
+    dependencies: []
+    cache:
+        paths:
+            - node_modules/
+        policy: pull
+    when: always
+    allow_failure: true
+
+publish-npm:
     stage: deploy
     script:
         - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
-        - npm publish
+        - npm --color="always" publish
     dependencies:
         - build
     only:
-        - /^v.*$/
+        refs:
+            - /^v.*$/
+        variables:
+            - $NPM_TOKEN
     except:
         - branches
+    cache:
+        paths:
+            - node_modules/
+        policy: pull
+
+publish-github:
+    stage: deploy
+    script:
+        # Update the package.json and package-lock.json
+        - "node -e \"fs.writeFileSync('package.json', JSON.stringify((json => {json.name = '@samuelthomas2774/node-acp'; json.publishConfig = {access: 'public'}; return json;})(JSON.parse(fs.readFileSync('package.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+        - "node -e \"fs.writeFileSync('package-lock.json', JSON.stringify((json => {json.name = '@samuelthomas2774/node-acp'; return json;})(JSON.parse(fs.readFileSync('package-lock.json', 'utf-8'))), null, 4) + '\\n', 'utf-8')\""
+
+        - echo "//npm.pkg.github.com/:_authToken=${GITHUB_NPM_TOKEN}" > .npmrc
+        - npm --color="always" --registry=https://npm.pkg.github.com/ publish
+    dependencies:
+        - build
+    only:
+        refs:
+            - /^v.*$/
+        variables:
+            - $GITHUB_NPM_TOKEN
+    except:
+        - branches
+    cache:
+        paths:
+            - node_modules/
+        policy: pull

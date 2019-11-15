@@ -12,11 +12,11 @@ node-acp is published to npm and GitHub Package Respository.
 Install node-acp globally if you want to use the acp command.
 
 ```
-# From packages.npmjs.com
+# From registry.npmjs.com
 npm install --global node-acp
 
-# From npm.packages.github.com
-npm install --global --registry https://npm.packages.github.com @samuelthomas2774/node-acp
+# From npm.pkg.github.com
+npm install --global --registry https://npm.pkg.github.com @samuelthomas2774/node-acp
 ```
 
 #### Local installation
@@ -24,7 +24,7 @@ npm install --global --registry https://npm.packages.github.com @samuelthomas277
 Install node-acp locally if you want to use it as a dependency in your project.
 
 ```
-# From packages.npmjs.com
+# From registry.npmjs.com
 npm install node-acp
 ```
 
