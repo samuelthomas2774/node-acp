@@ -74,7 +74,8 @@ lint:
     except:
         variables:
             - $NPM_AUDIT_SCHEDULE_SKIP_BUILD
-    dependencies: []
+    dependencies:
+        - build
 
 audit:
     stage: test
