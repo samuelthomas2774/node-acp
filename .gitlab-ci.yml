@@ -8,6 +8,8 @@ image: node:latest
 cache:
     paths:
         - node_modules/
+        - _test/
+    policy: pull
 
 build:
     stage: build
@@ -30,6 +32,11 @@ build:
     except:
         variables:
             - $NPM_AUDIT_SCHEDULE_SKIP_BUILD
+    cache:
+        paths:
+            - node_modules/
+            - _test/
+        policy: pull-push
 
 test:
     stage: test
@@ -40,21 +47,14 @@ test:
             - $NPM_AUDIT_SCHEDULE_SKIP_BUILD
     dependencies:
         - build
-    cache:
-        paths:
-            - node_modules/
-        policy: pull
 
 firmware-test:
     stage: test
     script:
-        - PATH=`pwd`/bin:$PATH npx
+        - PATH=`pwd`/bin:$PATH npx scripts/test-firmware-115-7.8.1.sh
+        - PATH=`pwd`/bin:$PATH npx scripts/test-firmware-120-7.9.1.sh
     dependencies:
         - build
-    cache:
-        paths:
-            - node_modules/
-        policy: pull
 
 lint:
     stage: test
@@ -70,10 +70,6 @@ lint:
         variables:
             - $NPM_AUDIT_SCHEDULE_SKIP_BUILD
     dependencies: []
-    cache:
-        paths:
-            - node_modules/
-        policy: pull
 
 audit:
     stage: test
@@ -89,10 +85,6 @@ audit:
             - .gitlab-ci.yml
             - package-lock.json
     dependencies: []
-    cache:
-        paths:
-            - node_modules/
-        policy: pull
     when: always
     allow_failure: true
 
@@ -110,10 +102,6 @@ publish-npm:
             - $NPM_TOKEN
     except:
         - branches
-    cache:
-        paths:
-            - node_modules/
-        policy: pull
 
 publish-github:
     stage: deploy
@@ -133,7 +121,3 @@ publish-github:
             - $GITHUB_NPM_TOKEN
     except:
         - branches
-    cache:
-        paths:
-            - node_modules/
-        policy: pull
