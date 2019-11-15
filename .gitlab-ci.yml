@@ -64,7 +64,7 @@ firmware-test:
 lint:
     stage: test
     script:
-        - npx eslint --color src/**/*.ts
+        - node_modules/.bin/eslint --color src/**/*.ts
     only:
         changes:
             - .gitlab-ci.yml
