@@ -1,6 +1,6 @@
 
 import CFLBinaryPList from './cflbinary';
-import acp_properties, {PropName, PropType, PropTypes} from './properties';
+import acp_properties, {PropName, PropType, PropTypes} from './properties'; // eslint-disable-line no-unused-vars
 
 interface PropData<N extends PropName = any, T extends PropType = PropTypes[N]> {
     name: N;
@@ -171,7 +171,7 @@ const ValueFormatters: {
     str(value) {
         return value.toString('utf-8');
     },
-}
+};
 
 class Property<N extends PropName = any, T extends PropType = PropTypes[N]> {
     readonly name?: N;
@@ -286,8 +286,8 @@ class Property<N extends PropName = any, T extends PropType = PropTypes[N]> {
         const name = property.name ? property.name : '\x00\x00\x00\x00';
         const value = property.value instanceof Buffer ? property.value :
             typeof property.value === 'number' ? property.value :
-            property.value ? Buffer.from(property.value, 'binary') :
-            Buffer.from('\x00\x00\x00\x00', 'binary');
+                property.value ? Buffer.from(property.value, 'binary') :
+                    Buffer.from('\x00\x00\x00\x00', 'binary');
 
         if (typeof value === 'number') {
             const buffer = Buffer.alloc(4);

@@ -1,5 +1,5 @@
 
-import Client, {Server, Property, PropName} from '..';
+import Client, {Server, Property, PropName} from '..'; // eslint-disable-line no-unused-vars
 import yargs from 'yargs';
 import bonjour from 'bonjour';
 

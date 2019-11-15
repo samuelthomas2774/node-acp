@@ -51,6 +51,7 @@ export function parse(data?: Buffer) {
         const inner_data = data.slice(HEADER_SIZE, data.length - 4);
         const stored_checksum = data.readUInt32BE(data.length - 4);
 
+        // eslint-disable-next-line no-unused-vars
         const {byte_0x0f, model, version, byte_0x18, byte_0x1a, flags, unknown_0x1c} = parseHeader(header_data);
 
         const decrypted_data = flags & 2 ? decrypt(inner_data, model, byte_0x0f) : inner_data;

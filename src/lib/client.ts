@@ -2,7 +2,7 @@
 import Session from './session';
 import Message, {HEADER_SIZE as MESSAGE_HEADER_SIZE} from './message';
 import Property, {HEADER_SIZE as ELEMENT_HEADER_SIZE} from './property';
-import {PropName, PropTypes} from './properties';
+import {PropName} from './properties'; // eslint-disable-line no-unused-vars
 import CFLBinaryPList from './cflbinary';
 
 import crypto from 'crypto';
