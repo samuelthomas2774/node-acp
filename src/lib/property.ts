@@ -1,6 +1,7 @@
 
 import CFLBinaryPList from './cflbinary';
 import acp_properties, {PropName, PropType, PropTypes} from './properties'; // eslint-disable-line no-unused-vars
+import ip from 'ip6addr';
 
 interface PropData<N extends PropName = any, T extends PropType = PropTypes[N]> {
     name: N;
@@ -17,13 +18,13 @@ interface HeaderData {
 
 export function generateACPProperties() {
     const props: PropData[] = [];
+    const types = ['str', 'dec', 'hex', 'log', 'mac', 'cfb', 'bin', 'ip4', 'ip6'];
 
     for (let [name, prop] of Object.entries(acp_properties)) {
         const [type, description, validator] = prop;
 
         if (name.length !== 4) throw new Error('Bad name in ACP properties list: ' + name);
 
-        const types = ['str', 'dec', 'hex', 'log', 'mac', 'cfb', 'bin'];
         if (!types.includes(type)) throw new Error('Bad type in ACP properties list for name: ' + name + ' - ' + type);
 
         if (!description) throw new Error('Missing description in ACP properties list for name: ' + name);
@@ -46,6 +47,8 @@ export type SupportedValues = {
     cfb: any;
     log: Buffer | string;
     str: Buffer | string;
+    ip4: Buffer | string;
+    ip6: Buffer | string;
 };
 
 const ValueInitialisers: {
@@ -128,6 +131,28 @@ const ValueInitialisers: {
             throw new Error('Invalid str value: ' + value);
         }
     },
+    ip4(value) {
+        if (value instanceof Buffer) return value;
+
+        if (typeof value === 'string') {
+            if (value.length === 4) return Buffer.from(value, 'binary');
+
+            return ip.parse(value).toBuffer();
+        }
+
+        throw new Error('Invalid ip4 value: ' + value);
+    },
+    ip6(value) {
+        if (value instanceof Buffer) return value;
+
+        if (typeof value === 'string') {
+            if (value.length === 4) return Buffer.from(value, 'binary');
+
+            return ip.parse(value).toBuffer();
+        }
+
+        throw new Error('Invalid ip6 value: ' + value);
+    },
 };
 
 export type FormattedValues = {
@@ -138,6 +163,8 @@ export type FormattedValues = {
     cfb: any;
     log: string;
     str: string;
+    ip4: string;
+    ip6: string;
 };
 
 const ValueFormatters: {
@@ -170,6 +197,13 @@ const ValueFormatters: {
     },
     str(value) {
         return value.toString('utf-8');
+    },
+    ip4(value) {
+        return ip.parse('::ffff:' + value.toString('hex').replace(/([a-f0-9]{4})(?!$)/gi, '$1:'))
+            .toString({format: 'v4'});
+    },
+    ip6(value) {
+        return ip.parse(value.toString('hex').replace(/([a-f0-9]{4})(?!$)/gi, '$1:')).toString();
     },
 };
 
