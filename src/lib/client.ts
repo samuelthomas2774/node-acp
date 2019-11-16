@@ -12,6 +12,13 @@ import crypto from 'crypto';
 import srp, {SrpParams} from 'fast-srp-hap';
 import BigInteger from 'fast-srp-hap/lib/jsbn';
 
+interface PropSetResponse {
+    name: PropName;
+    flags: number;
+    size: number;
+    value: Buffer;
+}
+
 export default class Client {
     readonly host: string;
     readonly port: number;
@@ -175,22 +182,30 @@ export default class Client {
             return;
         }
 
-        const prop_header = await this.receivePropertyElementHeader();
-        const {name, flags, size} = await Property.unpackHeader(prop_header);
+        const response: PropSetResponse[] = [];
 
-        const value = await this.receive(size);
+        while (true) {
+            const prop_header = await this.receivePropertyElementHeader();
+            const {name, flags, size} = await Property.unpackHeader(prop_header);
 
-        if (flags & 1) {
-            const error_code = value.readUInt32BE(0);
-            throw new Error('Error setting value for property "' + name + '": ' + error_code);
+            const value = await this.receive(size);
+
+            console.log('set', name, flags, size, value);
+
+            if (flags & 1) {
+                const error_code = value.readUInt32BE(0);
+                throw new Error('Error setting value for property "' + name + '": ' + error_code + ' ' + value.toString('hex'));
+            }
+
+            if (name as string === '\0\0\0\0') {
+                if (loglevel >= LogLevel.DEBUG) console.debug('Found empty prop end marker');
+                break;
+            }
+
+            response.push({name, flags, size, value});
         }
 
-        const prop = new Property(name, value);
-        if (loglevel >= LogLevel.DEBUG) console.debug('Prop', prop);
-
-        if (typeof prop.name === 'undefined' && typeof prop.value === 'undefined') {
-            if (loglevel >= LogLevel.DEBUG) console.debug('Found empty prop end marker');
-        }
+        return response;
     }
 
     /**

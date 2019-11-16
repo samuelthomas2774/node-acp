@@ -140,6 +140,7 @@ yargs.command('authenticate', 'Authenticate', yargs => {}, commandHandler(async 
 
 interface GetPropArguments {
     prop: PropName;
+    json: boolean;
     encryption: boolean;
 }
 
@@ -147,15 +148,20 @@ yargs.command('getprop <prop>', 'Get an ACP property', yargs => {
     yargs.positional('prop', {
         describe: 'The name of the ACP property',
     });
+    yargs.option('json', {
+        describe: 'Output value as JSON',
+        default: false,
+        type: 'boolean',
+    });
     yargs.option('encryption', {
         describe: 'Whether to encrypt connections to the AirPort device',
         default: true,
         type: 'boolean',
     });
 }, commandHandler(async (client, argv: GlobalArguments & GetPropArguments) => {
-    const props = await client.getProperties([argv.prop]);
+    const [prop] = await client.getProperties([argv.prop]);
 
-    console.log(props[0].format());
+    console.log(argv.json ? prop.toString() : prop.format());
 }));
 
 interface DebugDumpArguments {
@@ -216,14 +222,14 @@ yargs.command('pokeprop <prop> [type]', 'Attempt to get an ACP property and gues
     yargs.positional('type', {
         describe: 'The type of the ACP property',
     });
-    yargs.option('encryption', {
-        describe: 'Whether to encrypt connections to the AirPort device',
-        default: true,
-        type: 'boolean',
-    });
     yargs.option('json', {
         describe: 'Output value as JSON',
         default: false,
+        type: 'boolean',
+    });
+    yargs.option('encryption', {
+        describe: 'Whether to encrypt connections to the AirPort device',
+        default: true,
         type: 'boolean',
     });
 }, commandHandler(async (client, argv: GlobalArguments & PokePropArguments) => {
@@ -279,6 +285,7 @@ yargs.command('pokeprop <prop> [type]', 'Attempt to get an ACP property and gues
 interface SetPropArguments {
     prop: PropName;
     value: string;
+    json: boolean;
     encryption: boolean;
 }
 
@@ -288,16 +295,32 @@ yargs.command('setprop <prop> <value>', 'Set an ACP property', yargs => {
     }).positional('value', {
         describe: 'The new value',
     });
+    yargs.option('json', {
+        describe: 'Whether to parse the value as JSON before setting it',
+        default: false,
+        type: 'boolean',
+    });
     yargs.option('encryption', {
         describe: 'Whether to encrypt connections to the AirPort device',
         default: true,
         type: 'boolean',
     });
 }, commandHandler(async (client, argv: GlobalArguments & SetPropArguments) => {
-    const props = await client.setProperties([new Property(argv.prop, argv.value)]);
+    const value = argv.json ? JSON.parse(argv.value, reviver) : argv.value;
+    const props = await client.setProperties([new Property(argv.prop, value)]);
 
     console.log(props);
 }));
+
+function reviver(key: string, value: any) {
+    if (typeof value === 'object') {
+        const keys = Object.keys(value);
+
+        if (keys.length === 2 && keys.includes('type') && keys.includes('data') && value.type === 'Buffer') return Buffer.from(value.data);
+    }
+
+    return value;
+}
 
 yargs.command('features', 'Get supported features', yargs => {
     yargs.option('encryption', {
