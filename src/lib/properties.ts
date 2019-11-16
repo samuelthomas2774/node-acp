@@ -1,3 +1,5 @@
+import {PropType, SupportedValues} from './property';
+
 // Uncomment and fill out relevant fields to add support for a property
 // Properties must be in the following format:
 // (name, type, description, validation), where
@@ -5,6 +7,13 @@
 // type (required) is a valid property type (str, dec, hex, log, mac, cfb, bin)
 // description (required) is a short, one-line description of the property
 // validation (optional) is eval()d to verify the input value for setting a property
+
+const Validators = {
+    range: (from: number, to: number): Validator<'dec'> => value => {
+        const n = value.readUIntBE(0, value.length) - from;
+        return 0 <= n && n <= (to - from);
+    },
+};
 
 const _props = {
     'buil': ['str', 'Build string?', undefined] as Prop<'str'>,
@@ -553,11 +562,11 @@ const _props = {
     // 'awcc': ['', '', undefined],
 };
 
-export type PropType = 'str' | 'dec' | 'hex' | 'log' | 'mac' | 'cfb' | 'bin';
-type Validator = (value: Buffer, name: string) => boolean;
+export type Validator<T extends PropType = PropType> = ((value: Buffer, name: string) => boolean) |
+    SupportedValues[T][];
 
 // type Prop = [PropType, string, Validator | undefined];
-type Prop<T extends PropType = PropType> = [T, string, Validator | undefined];
+type Prop<T extends PropType = PropType> = [T, string, Validator<T> | undefined];
 
 export type PropName = keyof typeof _props;
 export type PropTypes = {

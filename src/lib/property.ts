@@ -1,7 +1,9 @@
 
 import CFLBinaryPList from './cflbinary';
-import acp_properties, {PropName, PropType, PropTypes} from './properties'; // eslint-disable-line no-unused-vars
+import acp_properties, {PropName, PropTypes} from './properties'; // eslint-disable-line no-unused-vars
 import ip from 'ip6addr';
+
+export type PropType = keyof SupportedValues;
 
 interface PropData<N extends PropName = any, T extends PropType = PropTypes[N]> {
     name: N;
@@ -21,7 +23,7 @@ export function generateACPProperties() {
     const types = ['str', 'dec', 'hex', 'log', 'mac', 'cfb', 'bin', 'ip4', 'ip6'];
 
     for (let [name, prop] of Object.entries(acp_properties)) {
-        const [type, description, validator] = prop;
+        let [type, description, validator] = prop;
 
         if (name.length !== 4) throw new Error('Bad name in ACP properties list: ' + name);
 
@@ -29,15 +31,17 @@ export function generateACPProperties() {
 
         if (!description) throw new Error('Missing description in ACP properties list for name: ' + name);
 
+        if (validator instanceof Array) {
+            const valid_values: Buffer[] = validator.map(v => ValueInitialisers[type](v));
+
+            validator = value => !!valid_values.find(v => v.equals(value));
+        }
+
         props.push({name, type, description, validator});
     }
 
     return props;
 }
-
-export const props = generateACPProperties();
-
-export const HEADER_SIZE = 12;
 
 export type SupportedValues = {
     dec: Buffer | string | number;
@@ -206,6 +210,8 @@ export const ValueFormatters: {
         return ip.parse(value.toString('hex').replace(/([a-f0-9]{4})(?!$)/gi, '$1:')).toString();
     },
 };
+
+export const HEADER_SIZE = 12;
 
 class Property<N extends PropName = any, T extends PropType = PropTypes[N]> {
     readonly name?: N;
@@ -387,3 +393,5 @@ interface Property<N extends PropName = any, T extends PropType = PropTypes[N]> 
 }
 
 export default Property;
+
+export const props = generateACPProperties();
