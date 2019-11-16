@@ -1,5 +1,5 @@
 
-import Client, {Server, Property, PropName, PropType} from '..'; // eslint-disable-line no-unused-vars
+import Client, {Server, Property, PropName, PropType, LogLevel, loglevel} from '..'; // eslint-disable-line no-unused-vars
 import {ValueFormatters} from '../lib/property';
 import * as cfb from '../lib/cflbinary';
 import yargs from 'yargs';
@@ -12,6 +12,7 @@ interface GlobalArguments {
     host?: string;
     port: number;
     password?: string;
+    log: LogLevel;
 }
 
 yargs.option('host', {
@@ -25,6 +26,11 @@ yargs.option('port', {
 yargs.option('password', {
     alias: 'p',
     describe: 'The device password of the AirPort device',
+});
+yargs.option('log', {
+    decribe: 'Log level',
+    type: 'number',
+    default: loglevel,
 });
 
 yargs.command('version', 'Shows the node-acp version', () => {}, argv => {
@@ -327,4 +333,5 @@ yargs.command('firmware-extract <input> <output>', 'Extract gzimg from a firmwar
 });
 
 // eslint-disable-next-line no-unused-vars
-const argv = yargs.argv;
+const argv = yargs.argv as unknown as GlobalArguments;
+require('..').loglevel = argv.log;

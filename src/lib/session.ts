@@ -2,6 +2,7 @@
 import Message, {HEADER_SIZE as MESSAGE_HEADER_SIZE} from './message';
 import {HEADER_SIZE as ELEMENT_HEADER_SIZE} from './property';
 // import {ClientEncryption, ServerEncryption} from './encryption';
+import {LogLevel, loglevel} from '..';
 
 import net from 'net';
 import crypto from 'crypto';
@@ -50,7 +51,7 @@ export default class Session extends EventEmitter {
 
             // @ts-ignore
             this.socket.connect(this.port, this.host, (err: any) => {
-                console.log('Connected', err);
+                if (loglevel >= LogLevel.INFO) console.log('Connected', err);
                 this.emit('connected');
                 if (err) reject(err);
                 else resolve();
@@ -62,13 +63,13 @@ export default class Session extends EventEmitter {
             });
 
             this.socket.on('data', data => {
-                console.debug(0, 'Receiving data', data);
+                if (loglevel >= LogLevel.DEBUG) console.debug(0, 'Receiving data', data);
 
                 this.emit('raw-data', data);
 
                 if (this.encryption) {
                     data = this.encryption.decrypt(data);
-                    console.debug(0, 'Decrypted', data);
+                    if (loglevel >= LogLevel.DEBUG) console.debug(0, 'Decrypted', data);
                 }
 
                 this.buffer = Buffer.concat([this.buffer, data]);
@@ -165,14 +166,14 @@ export default class Session extends EventEmitter {
         }
 
         if (this.encryption) {
-            console.debug(0, 'Before encryption', data);
+            if (loglevel >= LogLevel.DEBUG) console.debug(0, 'Before encryption', data);
             data = this.encryption.encrypt(data);
         }
 
         if (!this.socket) return;
 
         return new Promise<void>((resolve, reject) => {
-            console.info(0, 'Sending data', data);
+            if (loglevel >= LogLevel.DEBUG) console.info(0, 'Sending data', data);
             this.socket!.write(data as Buffer, 'binary', err => {
                 if (err) reject(err);
                 else resolve();

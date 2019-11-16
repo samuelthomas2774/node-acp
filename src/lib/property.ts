@@ -1,6 +1,7 @@
 
 import CFLBinaryPList from './cflbinary';
 import acp_properties, {PropName, PropTypes} from './properties'; // eslint-disable-line no-unused-vars
+import {LogLevel, loglevel} from '..';
 import ip from 'ip6addr';
 
 export type PropType = keyof SupportedValues;
@@ -288,12 +289,12 @@ class Property<N extends PropName = any, T extends PropType = PropTypes[N]> {
         const prop = props.find(p => p.name === propName);
 
         if (!prop) {
-            console.error('Property', propName, 'not supported');
+            if (loglevel >= LogLevel.WARNING) console.warn('Property', propName, 'not supported');
             return;
         }
 
         if (!prop[key]) {
-            console.error('Invalid property info key', key);
+            if (loglevel >= LogLevel.WARNING) console.warn('Invalid property info key', key);
             return;
         }
 
@@ -345,7 +346,7 @@ class Property<N extends PropName = any, T extends PropType = PropTypes[N]> {
         try {
             return this.packHeader({name, flags, size});
         } catch (err) {
-            console.error('Error packing property %s, flags %d, size %d - :', name, flags, size, err);
+            if (loglevel >= LogLevel.WARNING) console.error('Error packing property %s, flags %d, size %d - :', name, flags, size, err);
             throw err;
         }
     }

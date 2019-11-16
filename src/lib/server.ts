@@ -4,6 +4,7 @@ import Message, {HEADER_SIZE as MESSAGE_HEADER_SIZE} from './message';
 import Property, {HEADER_SIZE as ELEMENT_HEADER_SIZE, SupportedValues, PropType} from './property'; // eslint-disable-line no-unused-vars
 import {PropName, PropTypes} from './properties'; // eslint-disable-line no-unused-vars
 import CFLBinaryPList from './cflbinary';
+import {LogLevel, loglevel} from '..';
 
 import net from 'net';
 import crypto from 'crypto';
@@ -64,7 +65,7 @@ export default class Server {
 
             // @ts-ignore
             this.socket.listen(this.port, this.host, err => {
-                console.log('Listening', this.host, this.port, err);
+                if (loglevel >= LogLevel.INFO) console.log('Listening', this.host, this.port, err);
                 if (err) reject(err);
                 else resolve();
             });
@@ -93,17 +94,17 @@ export default class Server {
         const session = new Session(socket.remoteAddress!, socket.remotePort!, this.password!);
         session.socket = socket;
 
-        console.log('New connection from', session.host, session.port);
+        if (loglevel >= LogLevel.INFO) console.log('New connection from', session.host, session.port);
 
         socket.on('data', data => {
-            console.debug(0, 'Receiving data', data, 'on connection', session.host + ' port ' + session.port);
+            if (loglevel >= LogLevel.DEBUG) console.debug(0, 'Receiving data', data, 'on connection', session.host + ' port ' + session.port);
             if (session.reading) return;
 
             session.emit('raw-data', data);
 
             if (session.encryption) {
                 data = session.encryption.decrypt(data);
-                console.debug(0, 'Decrypted', data);
+                if (loglevel >= LogLevel.DEBUG) console.debug(0, 'Decrypted', data);
             }
 
             session.emit('data', data);
@@ -138,7 +139,7 @@ export default class Server {
 
             this.handleMessage(session, message);
         } catch (err) {
-            console.error('Error handling message from', session.host, session.port, err);
+            if (loglevel >= LogLevel.WARNING) console.error('Error handling message from', session.host, session.port, err);
             session.buffer = Buffer.alloc(0);
         }
     }
@@ -154,10 +155,10 @@ export default class Server {
         case 0x1a: {
             const data = CFLBinaryPList.parse(message.body!);
 
-            console.log('Authenticate request from', session.host, session.port, data);
+            if (loglevel >= LogLevel.DEBUG) console.debug('Authenticate request from', session.host, session.port, data);
 
             if (data.state === 1) {
-                console.log('Authenticate stage one');
+                if (loglevel >= LogLevel.DEBUG) console.debug('Authenticate stage one');
 
                 const user = this.users.get(data.username);
                 session.authenticating_user = data.username;
@@ -181,11 +182,11 @@ export default class Server {
                     modulus: params.N.toBuffer(true),
                 };
 
-                console.log('Stage one response payload', payload);
+                if (loglevel >= LogLevel.DEBUG) console.debug('Stage one response payload', payload);
 
                 await session.send(Message.composeAuthCommand(5, CFLBinaryPList.compose(payload)));
             } else if (data.state === 3) {
-                console.log('Authenticate stage three');
+                if (loglevel >= LogLevel.DEBUG) console.debug('Authenticate stage three');
 
                 const user = this.users.get(session.authenticating_user!); // eslint-disable-line no-unused-vars
                 const srps = session.srp!;
@@ -195,7 +196,7 @@ export default class Server {
                 try {
                     srps.checkM1(data.response); // throws error if wrong
                 } catch (err) {
-                    console.error('Error checking password', err.message);
+                    if (loglevel >= LogLevel.INFO) console.error('Error checking password', err.message);
                     session.socket!.destroy();
                     return;
                 }
@@ -208,7 +209,7 @@ export default class Server {
                     iv,
                 };
 
-                console.log('Stage three response payload', payload);
+                if (loglevel >= LogLevel.DEBUG) console.debug('Stage three response payload', payload);
 
                 await session.send(Message.composeAuthCommand(5, CFLBinaryPList.compose(payload)));
 
@@ -216,10 +217,10 @@ export default class Server {
                 const client_iv = data.iv;
 
                 // Enable session encryption
-                console.log('Enabling session encryption');
+                if (loglevel >= LogLevel.DEBUG) console.debug('Enabling session encryption');
                 session.enableServerEncryption(key, client_iv, iv);
             } else {
-                console.error('Unknown auth stage', data.state, message, data);
+                if (loglevel >= LogLevel.DEBUG) console.error('Unknown auth stage', data.state, message, data);
             }
 
             // console.log(payload, CFLBinaryPList.parse(payload));
@@ -229,7 +230,7 @@ export default class Server {
 
         // Get prop
         case 0x14: {
-            console.log('Received get prop command');
+            if (loglevel >= LogLevel.DEBUG) console.log('Received get prop command');
 
             let data = message.body!;
             const props: Property[] = [];
@@ -270,7 +271,7 @@ export default class Server {
         }
         }
 
-        console.error('Unknown command', message.command, message);
+        if (loglevel >= LogLevel.DEBUG) console.error('Unknown command', message.command, message);
     }
 
     getProperties(props: Property[]) {

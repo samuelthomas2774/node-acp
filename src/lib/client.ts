@@ -4,6 +4,7 @@ import Message, {HEADER_SIZE as MESSAGE_HEADER_SIZE} from './message';
 import Property, {HEADER_SIZE as ELEMENT_HEADER_SIZE} from './property';
 import {PropName} from './properties'; // eslint-disable-line no-unused-vars
 import CFLBinaryPList from './cflbinary';
+import {LogLevel, loglevel} from '..';
 
 import crypto from 'crypto';
 
@@ -115,7 +116,7 @@ export default class Client {
         const reply = await this.receiveMessageHeader();
         const reply_header = await Message.parseRaw(reply);
 
-        console.log('Get prop response', reply_header);
+        if (loglevel >= LogLevel.DEBUG) console.debug('Get prop response', reply_header);
 
         if (reply_header.error_code !== 0) {
             throw new Error('Error ' + reply_header.error_code);
@@ -125,9 +126,9 @@ export default class Client {
 
         while (true) {
             const prop_header = await this.receivePropertyElementHeader();
-            console.debug('Received property element header:', prop_header);
+            if (loglevel >= LogLevel.DEBUG) console.debug('Received property element header:', prop_header);
             const data = await Property.unpackHeader(prop_header);
-            console.debug(data);
+            if (loglevel >= LogLevel.DEBUG) console.debug(data);
             const {name, flags, size} = data;
 
             const value = await this.receive(size);
@@ -143,7 +144,7 @@ export default class Client {
                 break;
             }
 
-            console.debug('Prop', prop);
+            if (loglevel >= LogLevel.DEBUG) console.debug('Prop', prop);
 
             props_with_values.push(prop);
         }
@@ -170,7 +171,7 @@ export default class Client {
         const reply_header = await Message.parseRaw(raw_reply);
 
         if (reply_header.error_code !== 0) {
-            console.log('set properties error code', reply_header.error_code);
+            if (loglevel >= LogLevel.INFO) console.info('Set properties error code', reply_header.error_code);
             return;
         }
 
@@ -185,10 +186,10 @@ export default class Client {
         }
 
         const prop = new Property(name, value);
-        console.debug('Prop', prop);
+        if (loglevel >= LogLevel.DEBUG) console.debug('Prop', prop);
 
         if (typeof prop.name === 'undefined' && typeof prop.value === 'undefined') {
-            console.debug('found empty prop end marker');
+            if (loglevel >= LogLevel.DEBUG) console.debug('Found empty prop end marker');
         }
     }
 
@@ -250,7 +251,7 @@ export default class Client {
             username: 'admin',
         };
 
-        console.log('Authentication stage one data', payload);
+        if (loglevel >= LogLevel.DEBUG) console.debug('Authentication stage one data', payload);
 
         const message = Message.composeAuthCommand(4, CFLBinaryPList.compose(payload));
         await this.send(message);
@@ -269,7 +270,7 @@ export default class Client {
 
         const data = CFLBinaryPList.parse(response.body!);
 
-        console.log('Authentication stage two data', data);
+        if (loglevel >= LogLevel.DEBUG) console.debug('Authentication stage two data', data);
 
         return this.authenticateStageThree(data);
     }
@@ -330,7 +331,7 @@ export default class Client {
         //     response: Buffer, // .length === 20
         // }
 
-        console.log('Authentication stage 3 data', payload);
+        if (loglevel >= LogLevel.DEBUG) console.debug('Authentication stage 3 data', payload);
 
         const request = Message.composeAuthCommand(4, CFLBinaryPList.compose(payload));
         await this.send(request);
@@ -350,7 +351,7 @@ export default class Client {
 
         const data_2 = CFLBinaryPList.parse(response.body!);
 
-        console.log('Authentication stage 4 data', data_2);
+        if (loglevel >= LogLevel.DEBUG) console.debug('Authentication stage 4 data', data_2);
 
         return this.authenticateStageFive(srpc, iv, data_2);
     }
@@ -382,7 +383,7 @@ export default class Client {
         const key = srpc.computeK();
         const server_iv = data.iv;
 
-        console.log('Enabling encryption...');
+        if (loglevel >= LogLevel.DEBUG) console.debug('Enabling encryption...');
         this.session.enableEncryption(key, client_iv, server_iv);
     }
 }

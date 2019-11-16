@@ -3,6 +3,7 @@ import stream from 'stream';
 import crypto from 'crypto';
 import zlib from 'zlib';
 import adler32 from 'adler32';
+import {LogLevel, loglevel} from '..';
 
 const keys: {
     [model: number]: Buffer;
@@ -57,9 +58,11 @@ export function parse(data?: Buffer) {
         const decrypted_data = flags & 2 ? decrypt(inner_data, model, byte_0x0f) : inner_data;
 
         const checksum = adler32.sum(Buffer.concat([header_data, decrypted_data]));
-        console.debug('Stored checksum      %d %s', stored_checksum, stored_checksum.toString(16));
-        console.debug('Calculared checksum  %d %s', checksum, checksum.toString(16));
-        console.debug('Length               %d %s', header_data.length + decrypted_data.length, (header_data.length + decrypted_data.length).toString(16));
+        if (loglevel >= LogLevel.INFO) {
+            console.debug('Stored checksum      %d %s', stored_checksum, stored_checksum.toString(16));
+            console.debug('Calculared checksum  %d %s', checksum, checksum.toString(16));
+            console.debug('Length               %d %s', header_data.length + decrypted_data.length, (header_data.length + decrypted_data.length).toString(16));
+        }
         if (checksum !== stored_checksum) throw new Error('Bad checksum');
 
         return decrypted_data;
@@ -116,9 +119,11 @@ export function parse(data?: Buffer) {
                 const stored_checksum = last_data.readUInt32BE(0);
 
                 decrypt_stream.end(() => {
-                    console.debug('Stored checksum      %d %s', stored_checksum, stored_checksum.toString(16));
-                    console.debug('Calculared checksum  %d %s', checksum, checksum.toString(16));
-                    console.debug('Length               %d %s', header_data.length + length, (header_data.length + length).toString(16));
+                    if (loglevel >= LogLevel.INFO) {
+                        console.debug('Stored checksum      %d %s', stored_checksum, stored_checksum.toString(16));
+                        console.debug('Calculared checksum  %d %s', checksum, checksum.toString(16));
+                        console.debug('Length               %d %s', header_data.length + length, (header_data.length + length).toString(16));
+                    }
                     if (checksum !== stored_checksum) return callback(new Error('Bad checksum'));
                     callback();
                 });
@@ -174,7 +179,7 @@ export function decrypt(...args: any) {
 
     const iv = Buffer.from(HEADER_MAGIC + String.fromCharCode(byte_0x0f), 'binary');
     const key = deriveKey(model);
-    console.debug('Derived key for model %d: %s', model, key.toString('hex'));
+    if (loglevel >= LogLevel.DEBUG) console.debug('Derived key for model %d: %s', model, key.toString('hex'));
     const chunk_length = 0x8000;
 
     if (args[0] instanceof Buffer) {
@@ -257,9 +262,11 @@ export function extract(data?: Buffer) {
         const gzip_offset = data.indexOf(header_bytes);
         const gzdata = data.slice(gzip_offset);
 
-        console.debug('Data length %d', data.length);
-        console.debug('gzip offset %d', gzip_offset);
-        console.debug('gzip length %d', gzdata.length);
+        if (loglevel >= LogLevel.INFO) {
+            console.debug('Data length %d', data.length);
+            console.debug('gzip offset %d', gzip_offset);
+            console.debug('gzip length %d', gzdata.length);
+        }
 
         return new Promise<Buffer>((resolve, reject) => {
             zlib.unzip(gzdata, (err, buffer) => {
@@ -279,7 +286,7 @@ export function extract(data?: Buffer) {
                     const data = Buffer.concat([last_data, chunk]);
                     const gzip_offset = data.indexOf(header_bytes);
                     if (gzip_offset > -1) {
-                        console.debug('Found gzip offset %d', gzip_offset);
+                        if (loglevel >= LogLevel.INFO) console.debug('Found gzip offset %d', gzip_offset);
                         chunk = data.slice(gzip_offset);
                         found_header = true;
                     } else {
