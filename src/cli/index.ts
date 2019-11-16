@@ -267,6 +267,16 @@ yargs.command('pokeprop <prop> [type]', 'Attempt to get an ACP property and gues
                 parseBPList(prop.value!));
         }
 
+        if (prop.value!.length === 1) {
+            console.log('Value could be a 8 bit integer?', prop.value!.readUIntBE(0, 1));
+        }
+        if (prop.value!.length === 1 && [0, 1].includes(prop.value![0])) {
+            console.log('Value could be a boolean?', ValueFormatters.boo(prop.value!));
+        }
+        if (prop.value!.length === 2) {
+            console.log('Value could be a 16 bit integer?', prop.value!.readUInt16BE(0));
+        }
+
         if (prop.value!.length === 4) {
             console.log('Value could be a 32 bit integer?', prop.value!.readUInt32BE(0));
             console.log('Value could be an IPv4 address?', ValueFormatters.ip4(prop.value!));
@@ -274,6 +284,10 @@ yargs.command('pokeprop <prop> [type]', 'Attempt to get an ACP property and gues
 
         if (prop.value!.length === 6) {
             console.log('Value could be a MAC address?', ValueFormatters.mac(prop.value!));
+        }
+
+        if (prop.value!.length === 8) {
+            console.log('Value could be a 64 bit integer?', prop.value!.readBigUInt64BE(0));
         }
 
         if (prop.value!.length === 16) {

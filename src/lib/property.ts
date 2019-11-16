@@ -47,7 +47,12 @@ export function generateACPProperties() {
 }
 
 export type SupportedValues = {
+    boo: Buffer | string | boolean;
+    ui8: Buffer | string | number;
+    u16: Buffer | string | number;
     dec: Buffer | string | number;
+    u32: Buffer | string | number;
+    u64: Buffer | string | number | bigint;
     hex: Buffer | string | number;
     mac: Buffer | string;
     bin: Buffer | string;
@@ -62,6 +67,19 @@ export type SupportedValues = {
 const ValueInitialisers: {
     [T in keyof SupportedValues]: (value: Buffer | string | SupportedValues[T]) => Buffer;
 } = {
+    boo(value) {
+        // Support string true/1/false/0 values for the CLI
+        if (value === 'true' || value === '1') value = true;
+        if (value === 'false' || value === '0') value = false;
+
+        if (typeof value === 'string') value = Buffer.from(value, 'binary');
+        if (value instanceof Buffer) {
+            if (value.length !== 1 || ![0, 1].includes(value[0])) throw new Error('Invalid boolean value');
+            return value;
+        }
+
+        return Buffer.from(value ? '01' : '00', 'hex');
+    },
     dec(value) {
         if (value instanceof Buffer) {
             return value;
@@ -73,6 +91,67 @@ const ValueInitialisers: {
             return Buffer.from(value, 'binary');
         } else {
             throw new Error('Invalid number value: ' + value);
+        }
+    },
+    ui8(value) {
+        if (typeof value === 'string') value = Buffer.from(value, 'binary');
+        if (value instanceof Buffer) {
+            if (value.length !== 1) throw new Error('Invalid uint8 value');
+            return value;
+        }
+
+        if (typeof value === 'number') {
+            const buffer = Buffer.alloc(1);
+            buffer.writeUInt8(value, 0);
+            return buffer;
+        } else {
+            throw new Error('Invalid uint8 value: ' + value);
+        }
+    },
+    u16(value) {
+        if (typeof value === 'string') value = Buffer.from(value, 'binary');
+        if (value instanceof Buffer) {
+            if (value.length !== 2) throw new Error('Invalid uint16 value');
+            return value;
+        }
+
+        if (typeof value === 'number') {
+            const buffer = Buffer.alloc(2);
+            buffer.writeUInt16BE(value, 0);
+            return buffer;
+        } else {
+            throw new Error('Invalid uint16 value: ' + value);
+        }
+    },
+    u32(value) {
+        if (typeof value === 'string') value = Buffer.from(value, 'binary');
+        if (value instanceof Buffer) {
+            if (value.length !== 4) throw new Error('Invalid uint32 value');
+            return value;
+        }
+
+        if (typeof value === 'number') {
+            const buffer = Buffer.alloc(4);
+            buffer.writeUInt32BE(value, 0);
+            return buffer;
+        } else {
+            throw new Error('Invalid uint32 value: ' + value);
+        }
+    },
+    u64(value) {
+        if (typeof value === 'string') value = Buffer.from(value, 'binary');
+        if (value instanceof Buffer) {
+            if (value.length !== 8) throw new Error('Invalid uint64 value');
+            return value;
+        }
+        if (typeof value === 'number') value = BigInt(value);
+
+        if (typeof value === 'bigint') {
+            const buffer = Buffer.alloc(8);
+            buffer.writeBigUInt64BE(value, 0);
+            return buffer;
+        } else {
+            throw new Error('Invalid uint64 value: ' + value);
         }
     },
     hex(value) {
@@ -165,7 +244,12 @@ const ValueInitialisers: {
 };
 
 export type FormattedValues = {
+    boo: boolean;
     dec: number;
+    ui8: number;
+    u16: number;
+    u32: number;
+    u64: bigint;
     hex: string;
     mac: string;
     bin: Buffer;
@@ -180,8 +264,23 @@ export type FormattedValues = {
 export const ValueFormatters: {
     [T in keyof SupportedValues]: (value: Buffer) => FormattedValues[T];
 } = {
+    boo(value) {
+        return !!value[0];
+    },
     dec(value) {
         return value.readUIntBE(0, value.length);
+    },
+    ui8(value) {
+        return value.readUInt8(0);
+    },
+    u16(value) {
+        return value.readUInt16BE(0);
+    },
+    u32(value) {
+        return value.readUInt32BE(0);
+    },
+    u64(value) {
+        return value.readBigUInt64BE(0);
     },
     hex(value) {
         return '0x' + value.toString('hex');
@@ -301,7 +400,7 @@ class Property<N extends PropName = any, T extends PropType = PropTypes[N]> {
             return;
         }
 
-        if (!prop[key]) {
+        if (!prop.hasOwnProperty(key)) {
             if (loglevel >= LogLevel.WARNING) console.warn('Invalid property info key', key);
             return;
         }
