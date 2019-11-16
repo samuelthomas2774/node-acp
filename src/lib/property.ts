@@ -153,7 +153,7 @@ const ValueFormatters: {
         const mac_bytes: string[] = [];
 
         for (let i = 0; i < 6; i++) {
-            mac_bytes.push(value.slice(i).toString('hex'));
+            mac_bytes.push(value.slice(i, i + 1).toString('hex'));
         }
 
         return mac_bytes.join(':');
