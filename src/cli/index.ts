@@ -158,6 +158,52 @@ yargs.command('getprop <prop>', 'Get an ACP property', yargs => {
     console.log(props[0].format());
 }));
 
+interface DebugDumpArguments {
+    path: string;
+    encryption: boolean;
+}
+
+interface DebugData {
+    anonUUID: string;
+    entries: DebugDataEntry[];
+    version: number;
+}
+
+interface DebugDataEntry {
+    data: Buffer;
+    title: string;
+    dictID: number;
+}
+
+yargs.command('dump-debug <path>', 'Get an ACP property', yargs => {
+    yargs.positional('path', {
+        describe: 'Path to save to',
+    });
+    yargs.option('encryption', {
+        describe: 'Whether to encrypt connections to the AirPort device',
+        default: true,
+        type: 'boolean',
+    });
+}, commandHandler(async (client, argv: GlobalArguments & DebugDumpArguments) => {
+    const {promises: {mkdir, writeFile}} = await import('fs');
+    const path = await import('path');
+
+    const [prop] = await client.getProperties(['stat']);
+    const data: DebugData = prop.format();
+
+    try {
+        await mkdir(argv.path);
+    } catch (err) {
+        if (err.code !== 'EEXIST') throw err;
+    }
+
+    await writeFile(path.join(argv.path, 'anonuuid'), data.anonUUID + '\n', 'utf-8');
+
+    await Promise.all(data.entries.map(async entry => {
+        await writeFile(path.join(argv.path, `${entry.dictID}_${entry.title}.log`), entry.data);
+    }));
+}));
+
 interface PokePropArguments extends GetPropArguments {
     type?: PropType;
     json: boolean;
