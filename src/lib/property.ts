@@ -167,7 +167,7 @@ export type FormattedValues = {
     ip6: string;
 };
 
-const ValueFormatters: {
+export const ValueFormatters: {
     [T in keyof SupportedValues]: (value: Buffer) => FormattedValues[T];
 } = {
     dec(value) {

@@ -134,7 +134,7 @@ export default class Client {
 
             if (flags & 1) {
                 const error_code = value.readInt32BE(0);
-                throw new Error('Error requesting value for property "' + name + '": ' + error_code);
+                throw new Error('Error requesting value for property "' + name + '": ' + error_code + ' ' + value.toString('hex'));
             }
 
             const prop = new Property(name, value);

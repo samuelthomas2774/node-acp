@@ -1,5 +1,7 @@
 
-import Client, {Server, Property, PropName} from '..'; // eslint-disable-line no-unused-vars
+import Client, {Server, Property, PropName, PropType} from '..'; // eslint-disable-line no-unused-vars
+import {ValueFormatters} from '../lib/property';
+import * as cfb from '../lib/cflbinary';
 import yargs from 'yargs';
 import bonjour from 'bonjour';
 
@@ -131,7 +133,7 @@ yargs.command('authenticate', 'Authenticate', yargs => {}, commandHandler(async 
 }));
 
 interface GetPropArguments {
-    prop: string;
+    prop: PropName;
     encryption: boolean;
 }
 
@@ -144,10 +146,71 @@ yargs.command('getprop <prop>', 'Get an ACP property', yargs => {
         default: true,
         type: 'boolean',
     });
-}, commandHandler(async (client, argv: GlobalArguments & SetPropArguments) => {
+}, commandHandler(async (client, argv: GlobalArguments & GetPropArguments) => {
     const props = await client.getProperties([argv.prop]);
 
     console.log(props[0].format());
+}));
+
+interface PokePropArguments extends GetPropArguments {
+    type?: PropType;
+    json: boolean;
+}
+
+yargs.command('pokeprop <prop> [type]', 'Attempt to get an ACP property and guess it\'s type', yargs => {
+    yargs.positional('prop', {
+        describe: 'The name of the ACP property',
+    });
+    yargs.positional('type', {
+        describe: 'The type of the ACP property',
+    });
+    yargs.option('encryption', {
+        describe: 'Whether to encrypt connections to the AirPort device',
+        default: true,
+        type: 'boolean',
+    });
+    yargs.option('json', {
+        describe: 'Output value as JSON',
+        default: false,
+        type: 'boolean',
+    });
+}, commandHandler(async (client, argv: GlobalArguments & PokePropArguments) => {
+    const {props: _props} = await import('../lib/property');
+    _props.unshift({
+        name: argv.prop,
+        type: argv.type || 'bin',
+        description: '',
+        validator: undefined,
+    });
+
+    const [prop] = await client.getProperties([argv.prop]);
+
+    console.log(argv.json ? prop.toString() : prop.format());
+
+    if (!argv.type) {
+        if (prop.value!.length >= cfb.HEADER_SIZE + cfb.FOOTER_SIZE + 1 &&
+            prop.value!.slice(0, cfb.HEADER_MAGIC.length).toString('binary') === cfb.HEADER_MAGIC &&
+            prop.value!.slice(-cfb.FOOTER_MAGIC.length).toString('binary') === cfb.FOOTER_MAGIC
+        ) {
+            console.log('Value could be a CFLBinaryPList?');
+            console.log(argv.json ?
+                JSON.stringify(cfb.CFLBinaryPListParser.parse(prop.value!), null, 4) :
+                cfb.CFLBinaryPListParser.parse(prop.value!));
+        }
+
+        if (prop.value!.length === 4) {
+            console.log('Value could be a 32 bit integer?', prop.value!.readUInt32BE(0));
+            console.log('Value could be an IPv4 address?', ValueFormatters.ip4(prop.value!));
+        }
+
+        if (prop.value!.length === 6) {
+            console.log('Value could be a MAC address?', ValueFormatters.mac(prop.value!));
+        }
+
+        if (prop.value!.length === 16) {
+            console.log('Value could be an IPv6 address?', ValueFormatters.ip6(prop.value!));
+        }
+    }
 }));
 
 interface SetPropArguments {
