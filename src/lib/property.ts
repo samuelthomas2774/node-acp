@@ -184,7 +184,7 @@ class Property<N extends PropName = any, T extends PropType = PropTypes[N]> {
      * @param {string} value
      */
     constructor(name?: N | '\0\0\0\0', value?: Buffer | string | SupportedValues[T]) {
-        if (name === '\x00\x00\x00\x00' && value === '\x00\x00\x00\x00') {
+        if (name === '\x00\x00\x00\x00') {
             name = undefined;
             value = undefined;
         }
