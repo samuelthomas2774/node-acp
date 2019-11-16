@@ -250,6 +250,17 @@ yargs.command('pokeprop <prop> [type]', 'Attempt to get an ACP property and gues
                 cfb.CFLBinaryPListParser.parse(prop.value!));
         }
 
+        const BPLIST_HEADER = 'bplist';
+        if (prop.value!.length > BPLIST_HEADER.length &&
+            prop.value!.slice(0, BPLIST_HEADER.length).toString('binary') === BPLIST_HEADER
+        ) {
+            const {parseBuffer: parseBPList} = await import('bplist-parser');
+            console.log('Value could be a binary plist?');
+            console.log(argv.json ?
+                JSON.stringify(parseBPList(prop.value!), null, 4) :
+                parseBPList(prop.value!));
+        }
+
         if (prop.value!.length === 4) {
             console.log('Value could be a 32 bit integer?', prop.value!.readUInt32BE(0));
             console.log('Value could be an IPv4 address?', ValueFormatters.ip4(prop.value!));

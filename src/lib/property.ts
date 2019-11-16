@@ -2,7 +2,10 @@
 import CFLBinaryPList from './cflbinary';
 import acp_properties, {PropName, PropTypes} from './properties'; // eslint-disable-line no-unused-vars
 import {LogLevel, loglevel} from '..';
+
 import ip from 'ip6addr';
+import {parseBuffer as parseBPList} from 'bplist-parser';
+import composeBPList from 'bplist-creator';
 
 export type PropType = keyof SupportedValues;
 
@@ -21,14 +24,13 @@ interface HeaderData {
 
 export function generateACPProperties() {
     const props: PropData[] = [];
-    const types = ['str', 'dec', 'hex', 'log', 'mac', 'cfb', 'bin', 'ip4', 'ip6'];
 
     for (let [name, prop] of Object.entries(acp_properties)) {
         let [type, description, validator] = prop;
 
         if (name.length !== 4) throw new Error('Bad name in ACP properties list: ' + name);
 
-        if (!types.includes(type)) throw new Error('Bad type in ACP properties list for name: ' + name + ' - ' + type);
+        if (!ValueInitialisers[type]) throw new Error('Bad type in ACP properties list for name: ' + name + ' - ' + type);
 
         if (!description) throw new Error('Missing description in ACP properties list for name: ' + name);
 
@@ -54,6 +56,7 @@ export type SupportedValues = {
     str: Buffer | string;
     ip4: Buffer | string;
     ip6: Buffer | string;
+    bpl: any;
 };
 
 const ValueInitialisers: {
@@ -110,13 +113,9 @@ const ValueInitialisers: {
         }
     },
     cfb(value) {
-        if (value instanceof Buffer) {
-            return value;
-        } else if (typeof value === 'string') {
-            return Buffer.from(value, 'binary');
-        } else {
-            throw new Error('Invalid cfb value: ' + value);
-        }
+        if (value instanceof Buffer) return value;
+
+        return CFLBinaryPList.compose(value);
     },
     log(value) {
         if (value instanceof Buffer) {
@@ -158,6 +157,11 @@ const ValueInitialisers: {
 
         throw new Error('Invalid ip6 value: ' + value);
     },
+    bpl(value) {
+        if (value instanceof Buffer) return value;
+
+        return composeBPList(value);
+    },
 };
 
 export type FormattedValues = {
@@ -170,6 +174,7 @@ export type FormattedValues = {
     str: string;
     ip4: string;
     ip6: string;
+    bpl: any;
 };
 
 export const ValueFormatters: {
@@ -209,6 +214,9 @@ export const ValueFormatters: {
     },
     ip6(value) {
         return ip.parse(value.toString('hex').replace(/([a-f0-9]{4})(?!$)/gi, '$1:')).toString();
+    },
+    bpl(value) {
+        return parseBPList(value)[0];
     },
 };
 

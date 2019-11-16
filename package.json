@@ -29,6 +29,8 @@
     "dependencies": {
         "adler32": "^0.1.7",
         "bonjour": "^3.5.0",
+        "bplist-creator": "0.0.8",
+        "bplist-parser": "^0.2.0",
         "fast-srp-hap": "^1.0.1",
         "ip6addr": "^0.2.3",
         "pump": "^3.0.0",

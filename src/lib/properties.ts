@@ -426,6 +426,8 @@ const _props = {
     // 'DCPi': ['', '', undefined],
     // 'auSl': ['', '', undefined],
     // 'auFl': ['', '', undefined],
+    'auHK': ['bpl', 'AirPlay HomeKit pairing data', undefined] as Prop<'bpl'>,
+    'auHE': ['dec', '??', undefined] as Prop<'dec'>,
     'fe01': ['hex', '????', undefined] as Prop<'hex'>,
     'feat': ['str', 'Supported features?', undefined] as Prop<'str'>,
     'prop': ['str', 'Valid acp properties', undefined] as Prop<'str'>,
@@ -554,8 +556,6 @@ const _props = {
 
 export type Validator<T extends PropType = PropType> = ((value: Buffer, name: string) => boolean) |
     SupportedValues[T][];
-
-// type Prop = [PropType, string, Validator | undefined];
 type Prop<T extends PropType = PropType> = [T, string, Validator<T> | undefined];
 
 export type PropName = keyof typeof _props;
