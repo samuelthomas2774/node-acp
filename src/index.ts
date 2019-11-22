@@ -7,7 +7,8 @@ export {PropName, PropTypes} from './lib/properties';
 
 export {default as CFLBinaryPList} from './lib/cflbinary';
 import * as Firmware from './lib/firmware';
-export {Firmware};
+import * as Util from './lib/util';
+export {Firmware, Util};
 
 export enum LogLevel {
     NONE = 0,

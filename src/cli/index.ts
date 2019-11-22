@@ -2,6 +2,7 @@
 import Client, {Server, Property, PropName, PropType, LogLevel, loglevel} from '..'; // eslint-disable-line no-unused-vars
 import {ValueFormatters} from '../lib/property';
 import * as cfb from '../lib/cflbinary';
+import {createAdvertisementData} from '../lib/util';
 import yargs from 'yargs';
 import bonjour from 'bonjour';
 
@@ -80,8 +81,8 @@ yargs.command('server', 'Start the ACP server', yargs => {
             name: argv['advertise-name'],
             port: argv.port,
             type: 'airport',
-            txt: {waMA: '00-00-00-00-00-00,' + Object.entries({
-                // waMA: '00-00-00-00-00-00', // Ethernet MAC address
+            txt: createAdvertisementData({
+                waMA: '00-00-00-00-00-00', // Ethernet MAC address
                 raMA: argv['advertise-address'], // 5 GHz Wi-Fi MAC address - this is used to identify devices in AirPort Utility
                 raM2: '00-00-00-00-00-00', // 2.4 GHz Wi-Fi MAC address
                 raNm: argv['advertise-network'], // Network
@@ -95,7 +96,7 @@ yargs.command('server', 'Start the ACP server', yargs => {
                 srcv: '78000.12', // Build
                 bjSd: 43, // ?
                 // prob: '',
-            }).map(([k, v]) => `${k}=${v}`).join(',')},
+            }),
         });
 
         console.log('Advertising service', service);
