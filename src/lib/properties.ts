@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-unused-vars
 import {PropType, SupportedValues} from './property';
 
 // Uncomment and fill out relevant fields to add support for a property
@@ -427,7 +428,6 @@ const _props = {
     // 'auSl': ['', '', undefined],
     // 'auFl': ['', '', undefined],
     'auHK': ['bpl', 'AirPlay HomeKit pairing data', undefined] as Prop<'bpl'>,
-    // 'auHE': ['boo', 'HomeKit pairing enabled (DeviceWasSetupForHKAccessControl)', undefined] as Prop<'boo'>, // https://griff.github.io/airplay-spec/#airplay-system-flags
     'auHE': ['boo', 'HomeKit pairing enabled', undefined] as Prop<'boo'>,
     'fe01': ['hex', '????', undefined] as Prop<'hex'>,
     'feat': ['str', 'Supported features?', undefined] as Prop<'str'>,

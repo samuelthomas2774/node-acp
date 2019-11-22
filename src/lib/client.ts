@@ -158,6 +158,7 @@ export default class Client {
      * Sets properties on the AirPort device.
      *
      * @param {Property[]} props
+     * @return {Promise<PropSetResponse[]≥}
      */
     async setProperties(props: Property[]) {
         return this.session.queue(async session => {
@@ -175,7 +176,7 @@ export default class Client {
 
             if (reply_header.error_code !== 0) {
                 if (loglevel >= LogLevel.INFO) console.info('Set properties error code', reply_header.error_code);
-                return;
+                throw new Error('Received error code ' + reply_header.error_code.toString(16));
             }
 
             const response: PropSetResponse[] = [];

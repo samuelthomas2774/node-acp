@@ -144,6 +144,7 @@ const ValueInitialisers: {
             if (value.length !== 8) throw new Error('Invalid uint64 value');
             return value;
         }
+        // eslint-disable-next-line new-cap
         if (typeof value === 'number') value = BigInt(value);
 
         if (typeof value === 'bigint') {
