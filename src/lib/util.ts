@@ -2,7 +2,7 @@
 /** A MAC address, formatted as 00-00-00-00-00 */
 type MACAddress = string;
 
-interface AdvertisementData {
+export interface AdvertisementData {
     /** Ethernet MAC address */
     waMA: MACAddress;
     /** 5 GHz Wi-Fi MAC address - this is used to identify devices in AirPort Utility */
@@ -56,7 +56,7 @@ export function createAdvertisementData(data: AdvertisementData): Record<string,
     if (data.hasOwnProperty('prob') && typeof data.prob !== 'string') throw new Error('Invalid data');
 
     const result: Record<string, string> = {};
-    let i: string;
+    let i: string | null = null;
 
     for (const [key, value] of Object.entries(data)) {
         if (typeof i === 'string') {
