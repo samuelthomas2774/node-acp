@@ -4,6 +4,8 @@ import {HEADER_SIZE as ELEMENT_HEADER_SIZE} from './property';
 // import {ClientEncryption, ServerEncryption} from './encryption';
 import {LogLevel, loglevel} from '..';
 
+import adler32 from 'adler32';
+
 import net from 'net';
 import crypto from 'crypto';
 import EventEmitter from 'events';
@@ -60,6 +62,8 @@ export default class Session extends EventEmitter {
             this.socket.on('close', had_error => {
                 this.socket = null;
                 this.emit('disconnected');
+
+                for (const reject of this._queue_rejects) reject();
             });
 
             this.socket.on('data', data => {
@@ -106,9 +110,14 @@ export default class Session extends EventEmitter {
      */
     async receiveMessage(timeout?: number) {
         const raw_header = await this.receiveMessageHeader(timeout);
+        const {body_checksum} = Message.unpackHeader(raw_header);
         const message = await Message.parseRaw(raw_header);
 
-        const data = await this.receive(message.body_size);
+        const data = await this.receive(message.body_size, timeout);
+
+        if (data && body_checksum !== adler32.sum(data)) {
+            throw new Error('Body checksum does not match');
+        }
 
         // @ts-ignore
         message.body = data;
@@ -120,7 +129,7 @@ export default class Session extends EventEmitter {
      * Receives a message header from the ACP server.
      *
      * @param {number} timeout
-     * @return {Promise<string>}
+     * @return {Promise<Buffer>}
      */
     receiveMessageHeader(timeout?: number) {
         return this.receive(MESSAGE_HEADER_SIZE, timeout);
@@ -130,7 +139,7 @@ export default class Session extends EventEmitter {
      * Receives a property element header from the ACP server.
      *
      * @param {number} timeout
-     * @return {Promise<string>}
+     * @return {Promise<Buffer>}
      */
     receivePropertyElementHeader(timeout?: number) {
         return this.receive(ELEMENT_HEADER_SIZE, timeout);
@@ -142,7 +151,7 @@ export default class Session extends EventEmitter {
      * @param {Message|Buffer|string} data
      * @param {number} size
      * @param {number} timeout
-     * @return {Promise<string>}
+     * @return {Promise<Buffer>}
      */
     async sendAndReceive(data: Message | Buffer | string, size: number, timeout?: number) {
         await this.send(data);
@@ -154,7 +163,7 @@ export default class Session extends EventEmitter {
      * Sends data to the ACP server.
      *
      * @param {Message|Buffer|string} data
-     * @return {Promise}
+     * @return {Promise<Buffer>}
      */
     send(data: Message | Buffer | string) {
         if (data instanceof Message) {
@@ -170,7 +179,9 @@ export default class Session extends EventEmitter {
             data = this.encryption.encrypt(data);
         }
 
-        if (!this.socket) return;
+        if (!this.socket) {
+            throw new Error('Not connected');
+        }
 
         return new Promise<void>((resolve, reject) => {
             if (loglevel >= LogLevel.DEBUG) console.info(0, 'Sending data', data);
@@ -188,7 +199,7 @@ export default class Session extends EventEmitter {
      * @param {number} timeout (default is 10000 ms / 10 seconds)
      * @return {Promise<Buffer>}
      */
-    async receiveSize(size: number, timeout = 10000) {
+    private async receiveSize(size: number, timeout = 10000) {
         this.reading++;
 
         try {
@@ -233,12 +244,126 @@ export default class Session extends EventEmitter {
         return data;
     }
 
+    private _queue = Promise.resolve();
+    private _queue_rejects: ((reason?: any) => void)[] = [];
+
+    /**
+     * Adds a function to the session queue.
+     *
+     * @param {function} callback Function to call
+     * @return {Promise}
+     */
+    queue<T>(callback: (session: SessionLock) => PromiseLike<T>): Promise<T> {
+        return new Promise((resolve, reject) => {
+            this._queue_rejects.push(reject);
+
+            this._queue = this._queue.then(async () => {
+                const index = this._queue_rejects.indexOf(reject);
+                if (index <= -1) return reject(new Error('Canceled'));
+                this._queue_rejects.splice(index, 1);
+
+                const session = new SessionLock(this);
+
+                try {
+                    resolve(await callback(session));
+                } catch (err) {
+                    reject(err);
+                }
+
+                session.invalidate();
+            });
+        });
+    }
+
     enableEncryption(key: Buffer, client_iv: Buffer, server_iv: Buffer) {
         this.encryption = new ClientEncryption(key, client_iv, server_iv);
     }
 
     enableServerEncryption(key: Buffer, client_iv: Buffer, server_iv: Buffer) {
         this.encryption = new ServerEncryption(key, client_iv, server_iv);
+    }
+}
+
+export class SessionLock {
+    constructor(private session: Session | null) {}
+
+    invalidate() {
+        this.session = null;
+    }
+
+    get encrypted() {
+        if (!this.session) throw new Error('Lock is no longer valid');
+
+        return this.session.encryption;
+    }
+
+    get local_address(): [string, number] {
+        if (!this.session) throw new Error('Lock is no longer valid');
+
+        return [this.session.socket!.localAddress, this.session.socket!.localPort];
+    }
+
+    get remote_address(): [string, number] {
+        if (!this.session) throw new Error('Lock is no longer valid');
+
+        return [this.session.socket!.remoteAddress!, this.session.socket!.remotePort!];
+    }
+
+    /**
+     * Sends data to the ACP server.
+     *
+     * @param {Message|Buffer|string} data
+     * @return {Promise}
+     */
+    send(data: Message | Buffer | string) {
+        if (!this.session) throw new Error('Lock is no longer valid');
+
+        return this.session.send(data);
+    }
+
+    /**
+     * Receives and decrypts data from the ACP server.
+     *
+     * @param {number} size
+     * @param {number} [timeout]
+     * @return {Promise<Buffer>}
+     */
+    receive(size: number, timeout?: number) {
+        if (!this.session) throw new Error('Lock is no longer valid');
+
+        return this.session.receive(size, timeout);
+    }
+
+    /**
+     * Receives a message header from the ACP server.
+     *
+     * @param {number} [timeout]
+     * @return {Promise<Buffer>}
+     */
+    receiveMessageHeader(timeout?: number) {
+        return this.receive(MESSAGE_HEADER_SIZE, timeout);
+    }
+
+    /**
+     * Receives a property element header from the ACP server.
+     *
+     * @param {number} [timeout]
+     * @return {Promise<Buffer>}
+     */
+    receivePropertyElementHeader(timeout?: number) {
+        return this.receive(ELEMENT_HEADER_SIZE, timeout);
+    }
+
+    /**
+     * Receives and parses a Message from the ACP server.
+     *
+     * @param {number} [timeout]
+     * @return {Promise<Message>}
+     */
+    async receiveMessage(timeout?: number) {
+        if (!this.session) throw new Error('Lock is no longer valid');
+
+        return this.session.receiveMessage(timeout);
     }
 }
 

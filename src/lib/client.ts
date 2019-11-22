@@ -1,5 +1,5 @@
 
-import Session from './session';
+import Session, {SessionLock} from './session';
 import Message, {HEADER_SIZE as MESSAGE_HEADER_SIZE} from './message';
 import Property, {HEADER_SIZE as ELEMENT_HEADER_SIZE} from './property';
 import {PropName} from './properties'; // eslint-disable-line no-unused-vars
@@ -11,6 +11,8 @@ import crypto from 'crypto';
 // eslint-disable-next-line no-unused-vars
 import srp, {SrpParams} from 'fast-srp-hap';
 import BigInteger from 'fast-srp-hap/lib/jsbn';
+
+import adler32 from 'adler32';
 
 interface PropSetResponse {
     name: PropName;
@@ -24,7 +26,7 @@ export default class Client {
     readonly port: number;
     readonly password: string;
 
-    readonly session: Session;
+    private readonly session: Session;
 
     private authenticating: Promise<void> | null = null;
 
@@ -62,42 +64,33 @@ export default class Client {
         return this.session.close();
     }
 
+    get connected() {
+        return !!this.session.socket;
+    }
+
+    get session_encrypted() {
+        return this.session.encryption;
+    }
+
+    get local_address(): [string, number] {
+        return [this.session.socket!.localAddress, this.session.socket!.localPort];
+    }
+
+    get remote_address(): [string, number] {
+        return [this.session.socket!.remoteAddress!, this.session.socket!.remotePort!];
+    }
+
     /**
      * Sends a Message to the ACP server.
      *
-     * @param {Message|Buffer|string} data
-     * @return {Promise}
+     * @param {Message} data
+     * @return {Promise<Message>}
      */
-    send(data: Message | Buffer | string) {
-        return this.session.send(data);
-    }
-
-    /**
-     * Receives data from the ACP server.
-     *
-     * @param {number} size
-     * @return {Promise<string>}
-     */
-    receive(size: number) {
-        return this.session.receive(size);
-    }
-
-    /**
-     * Receives a message header from the ACP server.
-     *
-     * @return {Promise<string>}
-     */
-    receiveMessageHeader() {
-        return this.receive(MESSAGE_HEADER_SIZE);
-    }
-
-    /**
-     * Receives a property element header from the ACP server.
-     *
-     * @return {Promise<string>}
-     */
-    receivePropertyElementHeader() {
-        return this.receive(ELEMENT_HEADER_SIZE);
+    send(message: Message) {
+        return this.session.queue(async session => {
+            await session.send(message);
+            return session.receiveMessageHeader();
+        });
     }
 
     /**
@@ -111,52 +104,54 @@ export default class Client {
      * @return {Property[]}
      */
     async getProperties(props: (Property | PropName)[]) {
-        let payload = '';
+        return this.session.queue(async session => {
+            let payload = '';
 
-        for (let name of props) {
-            payload += Property.composeRawElement(0, name instanceof Property ? name : new Property(name));
-        }
-
-        const request = Message.composeGetPropCommand(4, this.password, payload);
-        await this.send(request);
-
-        const reply = await this.receiveMessageHeader();
-        const reply_header = await Message.parseRaw(reply);
-
-        if (loglevel >= LogLevel.DEBUG) console.debug('Get prop response', reply_header);
-
-        if (reply_header.error_code !== 0) {
-            throw new Error('Error ' + reply_header.error_code);
-        }
-
-        const props_with_values: Property[] = [];
-
-        while (true) {
-            const prop_header = await this.receivePropertyElementHeader();
-            if (loglevel >= LogLevel.DEBUG) console.debug('Received property element header:', prop_header);
-            const data = await Property.unpackHeader(prop_header);
-            if (loglevel >= LogLevel.DEBUG) console.debug(data);
-            const {name, flags, size} = data;
-
-            const value = await this.receive(size);
-
-            if (flags & 1) {
-                const error_code = value.readInt32BE(0);
-                throw new Error('Error requesting value for property "' + name + '": ' + error_code + ' ' + value.toString('hex'));
+            for (let name of props) {
+                payload += Property.composeRawElement(0, name instanceof Property ? name : new Property(name));
             }
 
-            const prop = new Property(name, value);
+            const request = Message.composeGetPropCommand(4, this.password, payload);
+            await session.send(request);
 
-            if (typeof prop.name === 'undefined' && typeof prop.value === 'undefined') {
-                break;
+            const reply = await session.receiveMessageHeader();
+            const reply_header = await Message.parseRaw(reply);
+
+            if (loglevel >= LogLevel.DEBUG) console.debug('Get prop response', reply_header);
+
+            if (reply_header.error_code !== 0) {
+                throw new Error('Error ' + reply_header.error_code);
             }
 
-            if (loglevel >= LogLevel.DEBUG) console.debug('Prop', prop);
+            const props_with_values: Property[] = [];
 
-            props_with_values.push(prop);
-        }
+            while (true) {
+                const prop_header = await session.receivePropertyElementHeader();
+                if (loglevel >= LogLevel.DEBUG) console.debug('Received property element header:', prop_header);
+                const data = await Property.unpackHeader(prop_header);
+                if (loglevel >= LogLevel.DEBUG) console.debug(data);
+                const {name, flags, size} = data;
 
-        return props_with_values;
+                const value = await session.receive(size);
+
+                if (flags & 1) {
+                    const error_code = value.readInt32BE(0);
+                    throw new Error('Error requesting value for property "' + name + '": ' + error_code + ' ' + value.toString('hex'));
+                }
+
+                const prop = new Property(name, value);
+
+                if (typeof prop.name === 'undefined' && typeof prop.value === 'undefined') {
+                    break;
+                }
+
+                if (loglevel >= LogLevel.DEBUG) console.debug('Prop', prop);
+
+                props_with_values.push(prop);
+            }
+
+            return props_with_values;
+        });
     }
 
     /**
@@ -165,47 +160,49 @@ export default class Client {
      * @param {Property[]} props
      */
     async setProperties(props: Property[]) {
-        let payload = '';
+        return this.session.queue(async session => {
+            let payload = '';
 
-        for (let prop of props) {
-            payload += Property.composeRawElement(0, prop);
-        }
-
-        const request = Message.composeSetPropCommand(0, this.password, payload);
-        await this.send(request);
-
-        const raw_reply = await this.receiveMessageHeader();
-        const reply_header = await Message.parseRaw(raw_reply);
-
-        if (reply_header.error_code !== 0) {
-            if (loglevel >= LogLevel.INFO) console.info('Set properties error code', reply_header.error_code);
-            return;
-        }
-
-        const response: PropSetResponse[] = [];
-
-        while (true) {
-            const prop_header = await this.receivePropertyElementHeader();
-            const {name, flags, size} = await Property.unpackHeader(prop_header);
-
-            const value = await this.receive(size);
-
-            console.log('set', name, flags, size, value);
-
-            if (flags & 1) {
-                const error_code = value.readUInt32BE(0);
-                throw new Error('Error setting value for property "' + name + '": ' + error_code + ' ' + value.toString('hex'));
+            for (let prop of props) {
+                payload += Property.composeRawElement(0, prop);
             }
 
-            if (name as string === '\0\0\0\0') {
-                if (loglevel >= LogLevel.DEBUG) console.debug('Found empty prop end marker');
-                break;
+            const request = Message.composeSetPropCommand(0, this.password, payload);
+            await session.send(request);
+
+            const raw_reply = await session.receiveMessageHeader();
+            const reply_header = await Message.parseRaw(raw_reply);
+
+            if (reply_header.error_code !== 0) {
+                if (loglevel >= LogLevel.INFO) console.info('Set properties error code', reply_header.error_code);
+                return;
             }
 
-            response.push({name, flags, size, value});
-        }
+            const response: PropSetResponse[] = [];
 
-        return response;
+            while (true) {
+                const prop_header = await session.receivePropertyElementHeader();
+                const {name, flags, size} = await Property.unpackHeader(prop_header);
+
+                const value = await session.receive(size);
+
+                console.log('set', name, flags, size, value);
+
+                if (flags & 1) {
+                    const error_code = value.readUInt32BE(0);
+                    throw new Error('Error setting value for property "' + name + '": ' + error_code + ' ' + value.toString('hex'));
+                }
+
+                if (name as string === '\0\0\0\0') {
+                    if (loglevel >= LogLevel.DEBUG) console.debug('Found empty prop end marker');
+                    break;
+                }
+
+                response.push({name, flags, size, value});
+            }
+
+            return response;
+        });
     }
 
     /**
@@ -214,10 +211,12 @@ export default class Client {
      * @return {Promise<Array>}
      */
     async getFeatures() {
-        await this.send(Message.composeFeatCommand(0));
-        const reply_header = await Message.parseRaw(await this.receiveMessageHeader());
-        const reply = await this.receive(reply_header.body_size);
-        return CFLBinaryPList.parse(reply);
+        return this.session.queue(async session => {
+            await session.send(Message.composeFeatCommand(0));
+            const reply_header = await Message.parseRaw(await session.receiveMessageHeader());
+            const reply = await session.receive(reply_header.body_size);
+            return CFLBinaryPList.parse(reply);
+        });
     }
 
     async getLogs() {
@@ -235,26 +234,30 @@ export default class Client {
     }
 
     async flashPrimary(payload: Buffer) {
-        this.send(Message.composeFlashPrimaryCommand(0, this.password, payload));
-        const reply_header = await Message.parseRaw(await this.receiveMessageHeader());
-        return await this.receive(reply_header.body_size);
+        return this.session.queue(async session => {
+            await session.send(Message.composeFlashPrimaryCommand(0, this.password, payload));
+            const reply_header = await Message.parseRaw(await session.receiveMessageHeader());
+            return await session.receive(reply_header.body_size);
+        });
     }
 
     async authenticate() {
-        if (this.session.encryption) {
-            throw new Error('Encryption is already enabled.');
-        }
+        return this.session.queue(async session => {
+            if (this.session.encryption) {
+                throw new Error('Encryption is already enabled.');
+            }
 
-        if (this.authenticating) return this.authenticating;
+            if (this.authenticating) return this.authenticating;
 
-        try {
-            await (this.authenticating = this.authenticateStageOne());
-        } finally {
-            this.authenticating = null;
-        }
+            try {
+                await (this.authenticating = this.authenticateStageOne(session));
+            } finally {
+                this.authenticating = null;
+            }
+        });
     }
 
-    private async authenticateStageOne() {
+    private async authenticateStageOne(session: SessionLock) {
         /**
          * Stage 1 (client)
          *
@@ -269,7 +272,7 @@ export default class Client {
         if (loglevel >= LogLevel.DEBUG) console.debug('Authentication stage one data', payload);
 
         const message = Message.composeAuthCommand(4, CFLBinaryPList.compose(payload));
-        await this.send(message);
+        await session.send(message);
 
         /**
          * Stage 2 (server)
@@ -277,7 +280,7 @@ export default class Client {
          * Return SRP params, the server's public key (B) and the user's salt.
          */
 
-        const response = await this.session.receiveMessage();
+        const response = await session.receiveMessage();
 
         if (response.error_code !== 0) {
             throw new Error('Authenticate stage two error code ' + response.error_code);
@@ -287,10 +290,10 @@ export default class Client {
 
         if (loglevel >= LogLevel.DEBUG) console.debug('Authentication stage two data', data);
 
-        return this.authenticateStageThree(data);
+        return this.authenticateStageThree(session, data);
     }
 
-    private async authenticateStageThree(data: {
+    private async authenticateStageThree(session: SessionLock, data: {
         salt: Buffer;
         generator: Buffer;
         publicKey: Buffer;
@@ -349,7 +352,7 @@ export default class Client {
         if (loglevel >= LogLevel.DEBUG) console.debug('Authentication stage 3 data', payload);
 
         const request = Message.composeAuthCommand(4, CFLBinaryPList.compose(payload));
-        await this.send(request);
+        await session.send(request);
 
         /**
          * Stage 4 (server)
@@ -358,7 +361,7 @@ export default class Client {
          * proof the server knows the password (M2).
          */
 
-        const response = await this.session.receiveMessage();
+        const response = await session.receiveMessage();
 
         if (response.error_code !== 0) {
             throw new Error('Authenticate stage 4 error code ' + response.error_code);
