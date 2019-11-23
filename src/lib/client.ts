@@ -1,7 +1,7 @@
 
-import Session, {SessionLock} from './session';
-import Message, {HEADER_SIZE as MESSAGE_HEADER_SIZE} from './message';
-import Property, {HEADER_SIZE as ELEMENT_HEADER_SIZE} from './property';
+import Session, {SessionLock} from './session'; // eslint-disable-line no-unused-vars
+import Message from './message';
+import Property from './property';
 import {PropName} from './properties'; // eslint-disable-line no-unused-vars
 import CFLBinaryPList from './cflbinary';
 import {LogLevel, loglevel} from '..';
@@ -86,13 +86,13 @@ export default class Client {
     /**
      * Sends a Message to the ACP server.
      *
-     * @param {Message} data
+     * @param {Message} message
      * @return {Promise<Message>}
      */
     send(message: Message) {
         return this.session.queue(async session => {
             await session.send(message);
-            return session.receiveMessageHeader();
+            return session.receiveMessage();
         });
     }
 
@@ -161,7 +161,7 @@ export default class Client {
      * Sets properties on the AirPort device.
      *
      * @param {Property[]} props
-     * @return {Promise<PropSetResponse[]≥}
+     * @return {Promise<PropSetResponse[]>}
      */
     async setProperties(props: Property[]) {
         return this.session.queue(async session => {
