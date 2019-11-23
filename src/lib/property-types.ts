@@ -706,7 +706,8 @@ export interface auHK {
     'AirPlay Accessories': never[];
     'HomeKit Accessories': HomeKitPairingData[];
     'HomeKit Enabled': boolean;
-    'HomeKit Access Level': 0;
+    /** Default is HomeKitAccessLevel.SAME_NETWORK */
+    'HomeKit Access Level'?: HomeKitAccessLevel;
     pk: Buffer;
 }
 
@@ -720,6 +721,12 @@ export interface HomeKitPairingData {
 export enum HAPPermissions {
     USER = 0,
     ADMIN = 1,
+}
+
+export enum HomeKitAccessLevel {
+    EVERYONE = 0,
+    SAME_NETWORK = 0,
+    REQUIRE_HOMEKIT_PAIRING = 1,
 }
 
 export type pECC = {

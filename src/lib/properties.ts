@@ -407,7 +407,7 @@ const _props = {
     // 'auPr': ['', '', undefined],
     // 'auJD': ['', '', undefined],
     // 'auNN': ['', '', undefined],
-    // 'auNP': ['', '', undefined],
+    'auNP': ['str', 'AirPlay Password', undefined] as Prop<'str'>,
     // 'aFrq': ['', '', undefined],
     // 'aChn': ['', '', undefined],
     // 'aLvl': ['', '', undefined],
