@@ -1,6 +1,7 @@
 
 import CFLBinaryPList from './cflbinary';
 import acp_properties, {PropName, PropTypes} from './properties'; // eslint-disable-line no-unused-vars
+import {replacer} from './util';
 import {LogLevel, loglevel} from '..';
 
 import ip from 'ip6addr';
@@ -375,7 +376,7 @@ class Property<N extends PropName = any, T extends PropType = PropTypes[N]> {
     }
 
     toString() {
-        return JSON.stringify(this.format());
+        return JSON.stringify(this.format(), replacer);
     }
 
     /**

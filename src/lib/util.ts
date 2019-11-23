@@ -101,3 +101,20 @@ export function getAdvertisementData(data: Record<string, string>): Advertisemen
 
     return result;
 }
+
+export function reviver(key: string, value: any) {
+    if (typeof value === 'object') {
+        const keys = Object.keys(value);
+
+        if (keys.length === 2 && keys.includes('type') && keys.includes('data') && value.type === 'Buffer') return Buffer.from(value.data);
+        if (keys.length === 2 && keys.includes('type') && keys.includes('data') && value.type === 'bigint') return BigInt(value.data);
+    }
+
+    return value;
+}
+
+export function replacer(key: string, value: any) {
+    if (typeof value === 'bigint') return {type: 'bigint', data: value.toString()};
+
+    return value;
+}

@@ -2,7 +2,7 @@
 import Client, {Server, Property, PropName, PropType, LogLevel, loglevel} from '..'; // eslint-disable-line no-unused-vars
 import {ValueFormatters} from '../lib/property';
 import * as cfb from '../lib/cflbinary';
-import {createAdvertisementData} from '../lib/util';
+import {createAdvertisementData, reviver, replacer} from '../lib/util';
 import yargs from 'yargs';
 import bonjour from 'bonjour';
 
@@ -253,7 +253,7 @@ yargs.command('pokeprop <prop> [type]', 'Attempt to get an ACP property and gues
         ) {
             console.log('Value could be a CFLBinaryPList?');
             console.log(argv.json ?
-                JSON.stringify(cfb.CFLBinaryPListParser.parse(prop.value!), null, 4) :
+                JSON.stringify(cfb.CFLBinaryPListParser.parse(prop.value!), replacer, 4) :
                 cfb.CFLBinaryPListParser.parse(prop.value!));
         }
 
@@ -264,7 +264,7 @@ yargs.command('pokeprop <prop> [type]', 'Attempt to get an ACP property and gues
             const {parseBuffer: parseBPList} = await import('bplist-parser');
             console.log('Value could be a binary plist?');
             console.log(argv.json ?
-                JSON.stringify(parseBPList(prop.value!), null, 4) :
+                JSON.stringify(parseBPList(prop.value!), replacer, 4) :
                 parseBPList(prop.value!));
         }
 
@@ -326,16 +326,6 @@ yargs.command('setprop <prop> <value>', 'Set an ACP property', yargs => {
 
     console.log(props);
 }));
-
-function reviver(key: string, value: any) {
-    if (typeof value === 'object') {
-        const keys = Object.keys(value);
-
-        if (keys.length === 2 && keys.includes('type') && keys.includes('data') && value.type === 'Buffer') return Buffer.from(value.data);
-    }
-
-    return value;
-}
 
 yargs.command('features', 'Get supported features', yargs => {
     yargs.option('encryption', {
