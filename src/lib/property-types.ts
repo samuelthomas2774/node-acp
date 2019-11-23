@@ -205,6 +205,8 @@ export interface FileSharingUser {
 
 export enum FileSharingAccess {
     READ_WRITE = 0,
+    READ_ONLY = 1,
+    NOT_ALLOWED = 2,
 }
 
 export interface stat {
@@ -311,6 +313,7 @@ export interface ScanResultsData {
 
 export interface WiFi {
     radios: WiFiRadioConfiguration[];
+    guestnet_intrabss?: boolean;
 }
 
 export interface WiFiRadioConfiguration {
