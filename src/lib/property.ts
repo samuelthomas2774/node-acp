@@ -64,6 +64,7 @@ export type SupportedValues = {
     ip4: Buffer | string;
     ip6: Buffer | string;
     bpl: any;
+    uid: Buffer | string;
 };
 
 const ValueInitialisers: {
@@ -83,62 +84,52 @@ const ValueInitialisers: {
         return Buffer.from(value ? '01' : '00', 'hex');
     },
     dec(value) {
-        if (value instanceof Buffer) {
-            return value;
-        } else if (typeof value === 'number') {
+        if (value instanceof Buffer) return value;
+        if (typeof value === 'string') return Buffer.from(value, 'binary');
+
+        if (typeof value === 'number') {
             const buffer = Buffer.alloc(4);
             buffer.writeUInt32BE(value, 0);
             return buffer;
-        } else if (typeof value === 'string') {
-            return Buffer.from(value, 'binary');
-        } else {
-            throw new Error('Invalid number value: ' + value);
         }
+
+        throw new Error('Invalid number value: ' + value);
     },
     ui8(value) {
-        if (typeof value === 'string') value = Buffer.from(value, 'binary');
-        if (value instanceof Buffer) {
-            if (value.length !== 1) throw new Error('Invalid uint8 value');
-            return value;
-        }
+        if (typeof value === 'string' && value.length === 1) return Buffer.from(value, 'binary');
+        if (value instanceof Buffer && value.length === 1) return value;
 
         if (typeof value === 'number') {
             const buffer = Buffer.alloc(1);
             buffer.writeUInt8(value, 0);
             return buffer;
-        } else {
-            throw new Error('Invalid uint8 value: ' + value);
         }
+
+        throw new Error('Invalid uint8 value: ' + value);
     },
     u16(value) {
-        if (typeof value === 'string') value = Buffer.from(value, 'binary');
-        if (value instanceof Buffer) {
-            if (value.length !== 2) throw new Error('Invalid uint16 value');
-            return value;
-        }
+        if (typeof value === 'string' && value.length === 2) return Buffer.from(value, 'binary');
+        if (value instanceof Buffer && value.length === 2) return value;
 
         if (typeof value === 'number') {
             const buffer = Buffer.alloc(2);
             buffer.writeUInt16BE(value, 0);
             return buffer;
-        } else {
-            throw new Error('Invalid uint16 value: ' + value);
         }
+
+        throw new Error('Invalid uint16 value: ' + value);
     },
     u32(value) {
-        if (typeof value === 'string') value = Buffer.from(value, 'binary');
-        if (value instanceof Buffer) {
-            if (value.length !== 4) throw new Error('Invalid uint32 value');
-            return value;
-        }
+        if (typeof value === 'string' && value.length === 4) return Buffer.from(value, 'binary');
+        if (value instanceof Buffer && value.length === 4) return value;
 
         if (typeof value === 'number') {
             const buffer = Buffer.alloc(4);
             buffer.writeUInt32BE(value, 0);
             return buffer;
-        } else {
-            throw new Error('Invalid uint32 value: ' + value);
         }
+
+        throw new Error('Invalid uint32 value: ' + value);
     },
     u64(value) {
         if (typeof value === 'string') value = Buffer.from(value, 'binary');
@@ -153,89 +144,64 @@ const ValueInitialisers: {
             const buffer = Buffer.alloc(8);
             buffer.writeBigUInt64BE(value, 0);
             return buffer;
-        } else {
-            throw new Error('Invalid uint64 value: ' + value);
         }
+
+        throw new Error('Invalid uint64 value: ' + value);
     },
     hex(value) {
-        if (value instanceof Buffer) {
-            return value;
-        } else if (typeof value === 'number') {
+        if (value instanceof Buffer) return value;
+        if (typeof value === 'string') return Buffer.from(value, 'binary');
+
+        if (typeof value === 'number') {
             const buffer = Buffer.alloc(4);
             buffer.writeUInt32BE(value, 0);
             return buffer;
-        } else if (typeof value === 'string') {
-            return Buffer.from(value, 'binary');
-        } else {
-            throw new Error('Invalid hex value: ' + value);
         }
+
+        throw new Error('Invalid hex value: ' + value);
     },
     mac(value) {
-        if (value instanceof Buffer) return value;
-
+        if (typeof value === 'string' && value.length === 6) return Buffer.from(value, 'binary');
         if (typeof value === 'string') {
-            if (value.length === 6) return Buffer.from(value, 'binary');
-
             const mac_bytes = value.split(':');
-
-            if (mac_bytes.length === 6) {
-                return Buffer.from(mac_bytes.join(''), 'hex');
-            }
+            if (mac_bytes.length === 6) value = Buffer.from(mac_bytes.join(''), 'hex');
         }
+        if (value instanceof Buffer && value.length === 6) return value;
 
         throw new Error('Invalid mac value: ' + value);
     },
     bin(value) {
-        if (value instanceof Buffer) {
-            return value;
-        } else if (typeof value === 'string') {
-            return Buffer.from(value, 'binary');
-        } else {
-            throw new Error('Invalid bin value: ' + value);
-        }
+        if (value instanceof Buffer) return value;
+        if (typeof value === 'string') return Buffer.from(value, 'binary');
+        throw new Error('Invalid bin value: ' + value);
     },
     cfb(value) {
+        // TODO: validate this?
         if (value instanceof Buffer) return value;
 
         return CFLBinaryPList.compose(value);
     },
     log(value) {
-        if (value instanceof Buffer) {
-            return value;
-        } else if (typeof value === 'string') {
-            return Buffer.from(value, 'binary');
-        } else {
-            throw new Error('Invalid log value: ' + value);
-        }
+        if (value instanceof Buffer) return value;
+        if (typeof value === 'string') return Buffer.from(value, 'binary');
+        throw new Error('Invalid log value: ' + value);
     },
     str(value) {
-        if (value instanceof Buffer) {
-            return value;
-        } else if (typeof value === 'string') {
-            return Buffer.from(value, 'binary');
-        } else {
-            throw new Error('Invalid str value: ' + value);
-        }
+        if (value instanceof Buffer) return value;
+        if (typeof value === 'string') return Buffer.from(value, 'binary');
+        throw new Error('Invalid str value: ' + value);
     },
     ip4(value) {
-        if (value instanceof Buffer) return value;
-
-        if (typeof value === 'string') {
-            if (value.length === 4) return Buffer.from(value, 'binary');
-
-            return ip.parse(value).toBuffer();
-        }
+        if (typeof value === 'string' && value.length === 4) return Buffer.from(value, 'binary');
+        if (typeof value === 'string') value = ip.parse(value).toBuffer();
+        if (value instanceof Buffer && value.length === 4) return value;
 
         throw new Error('Invalid ip4 value: ' + value);
     },
     ip6(value) {
-        if (value instanceof Buffer) return value;
-
-        if (typeof value === 'string') {
-            if (value.length === 4) return Buffer.from(value, 'binary');
-
-            return ip.parse(value).toBuffer();
-        }
+        if (typeof value === 'string' && value.length === 16) return Buffer.from(value, 'binary');
+        if (typeof value === 'string') value = ip.parse(value).toBuffer();
+        if (value instanceof Buffer && value.length === 16) return value;
 
         throw new Error('Invalid ip6 value: ' + value);
     },
@@ -244,6 +210,15 @@ const ValueInitialisers: {
 
         return composeBPList(value);
     },
+    uid(value) {
+        if (value instanceof Buffer && value.length === 16) return value;
+        if (typeof value === 'string' && value.length === 16) return Buffer.from(value, 'binary');
+        if (typeof value === 'string' && /^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(value)) {
+            return Buffer.from(value.replace(/-/g, ''), 'hex');
+        }
+
+        throw new Error('Invalid uid value: ' + value);
+    }
 };
 
 export type FormattedValues = {
@@ -262,6 +237,7 @@ export type FormattedValues = {
     ip4: string;
     ip6: string;
     bpl: any;
+    uid: string;
 };
 
 export const ValueFormatters: {
@@ -320,6 +296,10 @@ export const ValueFormatters: {
     bpl(value) {
         return parseBPList(value)[0];
     },
+    uid(value) {
+        return value.toString('hex')
+            .replace(/^([0-9a-f]{8})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{12})$/, '$1-$2-$3-$4-$5');
+    }
 };
 
 export const HEADER_SIZE = 12;
