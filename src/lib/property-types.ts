@@ -46,6 +46,20 @@ type MACAddress = string;
 /** Back To My Mac domain (x.members.btmm.icloud.com.) */
 type BackToMyMacDomain = string;
 
+export interface _6fwl {
+    entries: IPv6FirewallEntry[];
+}
+
+export interface IPv6FirewallEntry {
+    allowAll: boolean;
+    description: string;
+    host: IPv6Address;
+    /** Comma-separated numbers (e.g. 80, 443) */
+    tcpPorts: string;
+    /** Comma-separated numbers (e.g. 53) */
+    udpPorts: string;
+}
+
 export interface DynS {
   'State:/Network/PrivateDNS': never[];
   /** Domains to use Multicast DNS for (local, 254.169.in-addr.arpa, 8.e.f.ip6.arpa, 9.e.f.ip6.arpa, a.e.f.ip6.arpa, b.e.f.ip6.arpa) */
