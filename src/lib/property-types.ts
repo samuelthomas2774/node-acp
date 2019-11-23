@@ -50,10 +50,11 @@ type MACAddress = string;
 type BackToMyMacDomain = string;
 
 export interface DynS {
-  'State:/Network/PrivateDNS': never[];
-  /** Domains to use Multicast DNS for (local, 254.169.in-addr.arpa, 8.e.f.ip6.arpa, 9.e.f.ip6.arpa, a.e.f.ip6.arpa, b.e.f.ip6.arpa) */
-  'State:/Network/MulticastDNS': string[];
-  'State:/Network/BackToMyMac': Record<BackToMyMacDomain, BackToMyMacAccount>;
+    /** Used to include the Back To My Mac domain, now empty */
+    'State:/Network/PrivateDNS': string[];
+    /** Domains to use Multicast DNS for (local, 254.169.in-addr.arpa, 8.e.f.ip6.arpa, 9.e.f.ip6.arpa, a.e.f.ip6.arpa, b.e.f.ip6.arpa) */
+    'State:/Network/MulticastDNS': string[];
+    'State:/Network/BackToMyMac': Record<BackToMyMacDomain, BackToMyMacAccount>;
 }
 
 export interface BackToMyMacAccount {
@@ -682,10 +683,7 @@ export interface Profile {
     usrd: usrd;
     time: number;
     waD3: IPv4Address;
-    /** IPv6 firewall entries ?? */
-    '6fwl': {
-        entries: never[];
-    };
+    '6fwl': _6fwl;
     naBg: IPv4Address;
     snRW: string;
     iCld: iCld;
@@ -727,6 +725,7 @@ export enum HAPPermissions {
 }
 
 export enum HomeKitAccessLevel {
+    /** EVERYONE is the same as SAME_NETWORK as the AirPort Express doesn't support peer-to-peer AirPlay */
     EVERYONE = 0,
     SAME_NETWORK = 0,
     REQUIRE_HOMEKIT_PAIRING = 1,
