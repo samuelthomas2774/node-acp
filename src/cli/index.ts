@@ -3,7 +3,6 @@ import Client, {Server, Property, PropName, PropType, LogLevel, loglevel} from '
 import {ValueFormatters} from '../lib/property';
 import * as cfb from '../lib/cflbinary';
 import {createAdvertisementData, reviver, replacer} from '../lib/util';
-import {stat as DebugData} from '../lib/property-types';
 import yargs from 'yargs';
 import bonjour from 'bonjour';
 
@@ -185,7 +184,7 @@ yargs.command('dump-debug <path>', 'Get an ACP property', yargs => {
     const path = await import('path');
 
     const [prop] = await client.getProperties(['stat']);
-    const data: DebugData = prop.format();
+    const data = prop.format();
 
     try {
         await mkdir(argv.path);
@@ -236,55 +235,60 @@ yargs.command('pokeprop <prop> [type]', 'Attempt to get an ACP property and gues
     console.log(argv.json ? prop.toString() : prop.format());
 
     if (!argv.type) {
-        if (prop.value!.length >= cfb.HEADER_SIZE + cfb.FOOTER_SIZE + 1 &&
-            prop.value!.slice(0, cfb.HEADER_MAGIC.length).toString('binary') === cfb.HEADER_MAGIC &&
-            prop.value!.slice(-cfb.FOOTER_MAGIC.length).toString('binary') === cfb.FOOTER_MAGIC
-        ) {
-            console.log('Value could be a CFLBinaryPList?');
-            console.log(argv.json ?
-                JSON.stringify(cfb.CFLBinaryPListParser.parse(prop.value!), replacer, 4) :
-                cfb.CFLBinaryPListParser.parse(prop.value!));
-        }
-
-        const BPLIST_HEADER = 'bplist';
-        if (prop.value!.length > BPLIST_HEADER.length &&
-            prop.value!.slice(0, BPLIST_HEADER.length).toString('binary') === BPLIST_HEADER
-        ) {
-            const {parseBuffer: parseBPList} = await import('bplist-parser');
-            console.log('Value could be a binary plist?');
-            console.log(argv.json ?
-                JSON.stringify(parseBPList(prop.value!), replacer, 4) :
-                parseBPList(prop.value!));
-        }
-
-        if (prop.value!.length === 1) {
-            console.log('Value could be a 8 bit integer?', prop.value!.readUIntBE(0, 1));
-        }
-        if (prop.value!.length === 1 && [0, 1].includes(prop.value![0])) {
-            console.log('Value could be a boolean?', ValueFormatters.boo(prop.value!));
-        }
-        if (prop.value!.length === 2) {
-            console.log('Value could be a 16 bit integer?', prop.value!.readUInt16BE(0));
-        }
-
-        if (prop.value!.length === 4) {
-            console.log('Value could be a 32 bit integer?', prop.value!.readUInt32BE(0));
-            console.log('Value could be an IPv4 address?', ValueFormatters.ip4(prop.value!));
-        }
-
-        if (prop.value!.length === 6) {
-            console.log('Value could be a MAC address?', ValueFormatters.mac(prop.value!));
-        }
-
-        if (prop.value!.length === 8) {
-            console.log('Value could be a 64 bit integer?', prop.value!.readBigUInt64BE(0));
-        }
-
-        if (prop.value!.length === 16) {
-            console.log('Value could be an IPv6 address?', ValueFormatters.ip6(prop.value!));
-        }
+        await guessPropertyType(prop, argv.json);
     }
 }));
+
+async function guessPropertyType(prop: Property, json = false) {
+    if (prop.value!.length >= cfb.HEADER_SIZE + cfb.FOOTER_SIZE + 1 &&
+        prop.value!.slice(0, cfb.HEADER_MAGIC.length).toString('binary') === cfb.HEADER_MAGIC &&
+        prop.value!.slice(-cfb.FOOTER_MAGIC.length).toString('binary') === cfb.FOOTER_MAGIC
+    ) {
+        console.log('Value could be a CFLBinaryPList?');
+        console.log(json ?
+            JSON.stringify(cfb.CFLBinaryPListParser.parse(prop.value!), replacer, 4) :
+            cfb.CFLBinaryPListParser.parse(prop.value!));
+    }
+
+    const BPLIST_HEADER = 'bplist';
+    if (prop.value!.length > BPLIST_HEADER.length &&
+        prop.value!.slice(0, BPLIST_HEADER.length).toString('binary') === BPLIST_HEADER
+    ) {
+        const {parseBuffer: parseBPList} = await import('bplist-parser');
+        console.log('Value could be a binary plist?');
+        console.log(json ?
+            JSON.stringify(parseBPList(prop.value!), replacer, 4) :
+            parseBPList(prop.value!));
+    }
+
+    if (prop.value!.length === 1) {
+        console.log('Value could be a 8 bit integer?', prop.value!.readUIntBE(0, 1));
+    }
+    if (prop.value!.length === 1 && [0, 1].includes(prop.value![0])) {
+        console.log('Value could be a boolean?', ValueFormatters.boo(prop.value!));
+    }
+    if (prop.value!.length === 2) {
+        console.log('Value could be a 16 bit integer?', prop.value!.readUInt16BE(0));
+    }
+
+    if (prop.value!.length === 4) {
+        console.log('Value could be a 32 bit integer?', prop.value!.readUInt32BE(0));
+        console.log('Value could be an IPv4 address?', ValueFormatters.ip4(prop.value!));
+    }
+
+    if (prop.value!.length === 6) {
+        console.log('Value could be a MAC address?', ValueFormatters.mac(prop.value!));
+    }
+
+    if (prop.value!.length === 8) {
+        console.log('Value could be a 64 bit integer?', prop.value!.readBigUInt64BE(0));
+    }
+
+    if (prop.value!.length === 16) {
+        console.log('Value could be an IPv6 address?', ValueFormatters.ip6(prop.value!));
+        console.log('Value could be a UUID address?', ValueFormatters.uid(prop.value!));
+    }
+}
 
 interface SetPropArguments {
     prop: PropName;

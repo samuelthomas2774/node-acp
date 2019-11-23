@@ -1,8 +1,9 @@
 
 import Session, {SessionLock} from './session'; // eslint-disable-line no-unused-vars
 import Message from './message';
-import Property from './property';
-import {PropName} from './properties'; // eslint-disable-line no-unused-vars
+import Property, {PropType, FormattedValues, PropertyWithValue} from './property'; // eslint-disable-line no-unused-vars
+import {PropName, PropTypes} from './properties'; // eslint-disable-line no-unused-vars
+import PropertyValueTypes from './property-types'; // eslint-disable-line no-unused-vars
 import CFLBinaryPList from './cflbinary';
 import {LogLevel, loglevel} from '..';
 
@@ -104,9 +105,12 @@ export default class Client {
      * Server: ...Property
      *
      * @param {Array} props
+     * @param {boolean} [include_errors] If true if there is an error getting any property an Error object will be included in the return value, if false the error will be logged and nothing returned, if nothing passed any errors will be thrown
      * @return {Property[]}
      */
-    async getProperties(props: (Property | PropName)[]) {
+    async getProperties<N extends PropName, T extends PropType = PropTypes[N], V = N extends keyof PropertyValueTypes ? PropertyValueTypes[N] : FormattedValues[T]>(props: (Property<N, T, V> | N)[], include_errors: true): Promise<(PropertyWithValue<N, T, V> | Error)[]>
+    async getProperties<N extends PropName, T extends PropType = PropTypes[N], V = N extends keyof PropertyValueTypes ? PropertyValueTypes[N] : FormattedValues[T]>(props: (Property<N, T, V> | N)[], include_errors?: false): Promise<PropertyWithValue<N, T, V>[]>
+    async getProperties<N extends PropName, T extends PropType = PropTypes[N], V = N extends keyof PropertyValueTypes ? PropertyValueTypes[N] : FormattedValues[T]>(props: (Property<N, T, V> | N)[], include_errors?: boolean) {
         return this.session.queue(async session => {
             let payload = '';
 
@@ -126,7 +130,8 @@ export default class Client {
                 throw new Error('Error ' + reply_header.error_code);
             }
 
-            const props_with_values: Property[] = [];
+            const props_with_values: (Property | Error)[] = [];
+            let err: Error | null = null;
 
             while (true) {
                 const prop_header = await session.receivePropertyElementHeader();
@@ -139,7 +144,10 @@ export default class Client {
 
                 if (flags & 1) {
                     const error_code = value.readInt32BE(0);
-                    throw new Error('Error requesting value for property "' + name + '": ' + error_code + ' ' + value.toString('hex'));
+                    const error = new Error(`Error requesting value for property "${name}": ${error_code} ${value.toString('hex')}`);
+                    if (include_errors) props_with_values.push(error);
+                    else console.error((err = error).message);
+                    continue;
                 }
 
                 const prop = new Property(name, value);
@@ -153,8 +161,16 @@ export default class Client {
                 props_with_values.push(prop);
             }
 
+            if (typeof include_errors === 'undefined' && err) throw err;
+
             return props_with_values;
         });
+    }
+
+    async getProperty<N extends PropName, T extends PropType = PropTypes[N], V = N extends keyof PropertyValueTypes ? PropertyValueTypes[N] : FormattedValues[T]>(property: Property<N, T, V> | N) {
+        const [response]: (Property<N, T, V> | Error)[] = await this.getProperties([property], true);
+        if (response instanceof Error) throw response;
+        return response;
     }
 
     /**
@@ -224,7 +240,7 @@ export default class Client {
     }
 
     async getLogs() {
-        const [prop] = await this.getProperties(['logm']) as Property<'logm'>[];
+        const [prop] = await this.getProperties(['logm']);
         return prop.format();
     }
 

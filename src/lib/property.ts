@@ -308,8 +308,8 @@ class Property<
     N extends PropName = any, T extends PropType = PropTypes[N],
     V = N extends keyof PropertyValueTypes ? PropertyValueTypes[N] : FormattedValues[T]
 > {
-    readonly name?: N;
-    readonly value?: Buffer;
+    readonly name: N | undefined;
+    readonly value: Buffer | undefined;
 
     /**
      * Creates a Property.
@@ -487,5 +487,15 @@ interface Property<N extends PropName = any, T extends PropType = PropTypes[N]> 
 }
 
 export default Property;
+
+export interface PropertyWithValue<
+    N extends PropName = any, T extends PropType = PropTypes[N],
+    V = N extends keyof PropertyValueTypes ? PropertyValueTypes[N] : FormattedValues[T]
+> extends Property<N, T, V> {
+    readonly name: N;
+    readonly value: Buffer;
+
+    format(): (N extends keyof PropertyValueTypes ? PropertyValueTypes[N] : FormattedValues[T]);
+}
 
 export const props = generateACPProperties();
