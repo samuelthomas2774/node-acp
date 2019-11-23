@@ -12,13 +12,16 @@ import crypto from 'crypto';
 import srp, {SrpParams} from 'fast-srp-hap';
 import BigInteger from 'fast-srp-hap/lib/jsbn';
 
-import adler32 from 'adler32';
-
 interface PropSetResponse {
     name: PropName;
     flags: number;
     size: number;
     value: Buffer;
+}
+
+enum GetPropError {
+    NOT_AVAILABLE = -10, // 0xfffffff6
+    UNKNOWN = -6772, // 0xffffe58c - returned from raNm
 }
 
 export default class Client {

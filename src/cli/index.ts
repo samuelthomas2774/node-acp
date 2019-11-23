@@ -3,6 +3,7 @@ import Client, {Server, Property, PropName, PropType, LogLevel, loglevel} from '
 import {ValueFormatters} from '../lib/property';
 import * as cfb from '../lib/cflbinary';
 import {createAdvertisementData, reviver, replacer} from '../lib/util';
+import {stat as DebugData} from '../lib/property-types';
 import yargs from 'yargs';
 import bonjour from 'bonjour';
 
@@ -168,18 +169,6 @@ yargs.command('getprop <prop>', 'Get an ACP property', yargs => {
 interface DebugDumpArguments {
     path: string;
     encryption: boolean;
-}
-
-interface DebugData {
-    anonUUID: string;
-    entries: DebugDataEntry[];
-    version: number;
-}
-
-interface DebugDataEntry {
-    data: Buffer;
-    title: string;
-    dictID: number;
 }
 
 yargs.command('dump-debug <path>', 'Get an ACP property', yargs => {

@@ -1,6 +1,7 @@
 
 import CFLBinaryPList from './cflbinary';
 import acp_properties, {PropName, PropTypes} from './properties'; // eslint-disable-line no-unused-vars
+import PropertyValueTypes from './property-types';
 import {replacer} from './util';
 import {LogLevel, loglevel} from '..';
 
@@ -323,7 +324,10 @@ export const ValueFormatters: {
 
 export const HEADER_SIZE = 12;
 
-class Property<N extends PropName = any, T extends PropType = PropTypes[N]> {
+class Property<
+    N extends PropName = any, T extends PropType = PropTypes[N],
+    V = N extends keyof PropertyValueTypes ? PropertyValueTypes[N] : FormattedValues[T]
+> {
     readonly name?: N;
     readonly value?: Buffer;
 
@@ -365,7 +369,7 @@ class Property<N extends PropName = any, T extends PropType = PropTypes[N]> {
      *
      * @return {*}
      */
-    format(): FormattedValues[T] | null {
+    format(): (N extends keyof PropertyValueTypes ? PropertyValueTypes[N] : FormattedValues[T]) | null {
         if (!this.name || !this.value) return null;
 
         const type = this.constructor.getPropertyInfoString(this.name, 'type') as PropType;
