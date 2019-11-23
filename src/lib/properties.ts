@@ -490,7 +490,7 @@ const _props = {
     // '6pmp': ['', '', undefined],
     '6trd': ['boo', 'Allow Teredo', undefined] as Prop<'boo'>,
     // '6sec': ['', '', undefined],
-    // '6fwl': ['', '', undefined],
+    '6fwl': ['cfb', 'IPv6 firewall', undefined] as Prop<'cfb'>,
     '6NS1': ['ip6', 'IPv6 DNS server #1', undefined] as Prop<'ip6'>,
     '6NS2': ['ip6', 'IPv6 DNS server #2', undefined] as Prop<'ip6'>,
     '6NS3': ['ip6', 'IPv6 DNS server #3', undefined] as Prop<'ip6'>,

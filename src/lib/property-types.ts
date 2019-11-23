@@ -1,11 +1,13 @@
 type types = {
     DynS: DynS;
+    cfpf: cfpf;
     cloD: cloD;
     fire: fire;
     syLR: syLR;
     syAR: syAR;
     sySI: sySI;
     CLTM: CLTM;
+    sPLL: sPLL;
     sySt: sySt;
     syIg: syIg;
     timz: timz;
@@ -27,6 +29,7 @@ type types = {
     wsci: wsci;
     auHK: auHK;
     pECC: pECC;
+    '6fwl': _6fwl;
     rteI: rteI;
     iCld: iCld;
     iCLH: iCLH;
@@ -46,20 +49,6 @@ type MACAddress = string;
 /** Back To My Mac domain (x.members.btmm.icloud.com.) */
 type BackToMyMacDomain = string;
 
-export interface _6fwl {
-    entries: IPv6FirewallEntry[];
-}
-
-export interface IPv6FirewallEntry {
-    allowAll: boolean;
-    description: string;
-    host: IPv6Address;
-    /** Comma-separated numbers (e.g. 80, 443) */
-    tcpPorts: string;
-    /** Comma-separated numbers (e.g. 53) */
-    udpPorts: string;
-}
-
 export interface DynS {
   'State:/Network/PrivateDNS': never[];
   /** Domains to use Multicast DNS for (local, 254.169.in-addr.arpa, 8.e.f.ip6.arpa, 9.e.f.ip6.arpa, a.e.f.ip6.arpa, b.e.f.ip6.arpa) */
@@ -74,6 +63,12 @@ export interface BackToMyMacAccount {
     StatusCode: number;
     ExternalAddress: IPv4Address;
     LastNATMapResultCode: number;
+}
+
+export interface cfpf {
+    'com.apple.MyApp': {
+        name: 'My Name';
+    };
 }
 
 export interface cloD {
@@ -173,6 +168,14 @@ export interface CLTM {
     BadSensors: 0;
     Ts: number;
     Last_uVal: number;
+}
+
+export interface sPLL {
+    AudioPLLRetries: number;
+    CPUPLLRetries: number;
+    BasebandPLLRetries: number;
+    PCIePLLRetries: bigint;
+    DDRPLLRetries: number;
 }
 
 export interface sySt {
@@ -733,6 +736,20 @@ export type pECC = {
     name: string;
     value: number;
 }[];
+
+export interface _6fwl {
+    entries: IPv6FirewallEntry[];
+}
+
+export interface IPv6FirewallEntry {
+    allowAll: boolean;
+    description: string;
+    host: IPv6Address;
+    /** Comma-separated numbers (e.g. 80, 443) */
+    tcpPorts: string;
+    /** Comma-separated numbers (e.g. 53) */
+    udpPorts: string;
+}
 
 export interface rteI {
     IPv4: IPv4Address;
