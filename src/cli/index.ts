@@ -199,6 +199,57 @@ yargs.command('dump-debug <path>', 'Get an ACP property', yargs => {
     }));
 }));
 
+interface DumpPropsArguments {
+    list: string;
+    all: boolean;
+    json: boolean;
+    encryption: boolean;
+}
+
+yargs.command('dumpprops <list>', 'Attempt to get an list of ACP properties and guess their types', yargs => {
+    yargs.positional('list', {
+        describe: 'A file containing a list of property names, each on it\'s own line',
+    });
+    yargs.option('all', {
+        describe: 'Request all properties in the list, including those that are already known',
+        default: false,
+        type: 'boolean',
+    });
+    yargs.option('json', {
+        describe: 'Output value as JSON',
+        default: false,
+        type: 'boolean',
+    });
+    yargs.option('encryption', {
+        describe: 'Whether to encrypt connections to the AirPort device',
+        default: true,
+        type: 'boolean',
+    });
+}, commandHandler(async (client, argv: GlobalArguments & DumpPropsArguments) => {
+    const {promises: {readFile, writeFile}} = await import('fs');
+    const {props: _props} = await import('../lib/property');
+
+    const allpropnames = (await readFile(argv.list, 'utf-8')).trim().split('\n');
+    const propnames = allpropnames
+        .filter((pn, i) => (argv.all || !_props.find(prop => pn === prop.name)) && allpropnames.indexOf(pn) === i);
+
+    for (const prop of propnames) {
+        _props.unshift({
+            name: prop,
+            type: 'bin',
+            description: '',
+            validator: undefined,
+        });
+    }
+
+    const props = await client.getProperties(propnames as PropName[], false);
+
+    for (const prop of props) {
+        console.log('Prop %s value:', prop.name, argv.json ? prop.toString() : prop.format());
+        await guessPropertyType(prop, argv.json);
+    }
+}));
+
 interface PokePropArguments extends GetPropArguments {
     type?: PropType;
     json: boolean;
