@@ -3,6 +3,10 @@ node-acp
 
 A Node.js implementation of the management protocol of Apple's AirPort devices.
 
+### Requirements
+
+As some properties use 64 bit numbers which are handled with ES2020 BigInts Node.js v10.8 is required.
+
 ### Installation
 
 node-acp is published to npm and GitHub Package Respository.

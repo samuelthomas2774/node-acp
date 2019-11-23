@@ -11,6 +11,9 @@
         "type": "git",
         "url": "https://gitlab.fancy.org.uk/samuel/node-acp.git"
     },
+    "engines": {
+        "node": ">=10.8"
+    },
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "bin": {

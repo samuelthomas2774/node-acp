@@ -3,7 +3,8 @@
         "strict": true,
         "esModuleInterop": true,
         "declaration": true,
-        "target": "es5",
+        "target": "es2016",
+        "module": "commonjs",
         "rootDir": "src",
         "outDir": "dist"
     },
