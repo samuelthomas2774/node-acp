@@ -458,11 +458,17 @@ export interface tACL {
 }
 
 export interface AccessControlEntry {
+    ssids?: AccessControlDeviceSpecificPSK[];
     description: string;
     expiryTime?: bigint;
     macAddress: MACAddress;
     /** Access times ("t=0-0" means access always allowed, "days=-------;t=0-0" means access never allowed) */
     wirelessAccessTimes: string[];
+}
+
+export interface AccessControlDeviceSpecificPSK {
+    ssid: string;
+    psk: Buffer | {type: 'Buffer'; data: number[];};
 }
 
 export interface USBi {
