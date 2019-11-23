@@ -1,5 +1,5 @@
 
-import Client, {Server, Property, PropName, PropType, LogLevel, loglevel} from '..'; // eslint-disable-line no-unused-vars
+import Client, {Server, Property, PropName, PropType, LogLevel, loglevel} from '..';
 import {ValueFormatters} from '../lib/property';
 import * as cfb from '../lib/cflbinary';
 import {createAdvertisementData, reviver, replacer} from '../lib/util';
@@ -461,6 +461,5 @@ yargs.command('firmware-extract <input> <output>', 'Extract gzimg from a firmwar
     }
 });
 
-// eslint-disable-next-line no-unused-vars
 const argv = yargs.argv as unknown as GlobalArguments;
 require('..').loglevel = argv.log;

@@ -1,8 +1,8 @@
 
 import Session from './session';
 import Message, {HEADER_SIZE as MESSAGE_HEADER_SIZE} from './message';
-import Property, {HEADER_SIZE as ELEMENT_HEADER_SIZE, SupportedValues, PropType} from './property'; // eslint-disable-line no-unused-vars
-import {PropName, PropTypes} from './properties'; // eslint-disable-line no-unused-vars
+import Property, {HEADER_SIZE as ELEMENT_HEADER_SIZE, SupportedValues, PropType} from './property';
+import {PropName, PropTypes} from './properties';
 import CFLBinaryPList from './cflbinary';
 import {LogLevel, loglevel} from '..';
 

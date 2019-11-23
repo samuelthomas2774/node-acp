@@ -107,6 +107,7 @@ export function reviver(key: string, value: any) {
         const keys = Object.keys(value);
 
         if (keys.length === 2 && keys.includes('type') && keys.includes('data') && value.type === 'Buffer') return Buffer.from(value.data);
+        // eslint-disable-next-line new-cap
         if (keys.length === 2 && keys.includes('type') && keys.includes('data') && value.type === 'bigint') return BigInt(value.data);
     }
 

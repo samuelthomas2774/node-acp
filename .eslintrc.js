@@ -1,5 +1,7 @@
 module.exports = {
-    extends: 'google',
+    extends: [
+        'google',
+    ],
     parser: '@typescript-eslint/parser',
     parserOptions: {
         ecmaVersion: 8,
@@ -12,5 +14,8 @@ module.exports = {
         'require-jsdoc': 'warn',
         'arrow-parens': ['warn', 'as-needed'],
         'space-before-function-paren': ['error', {anonymous: 'always', named: 'never'}],
+
+        // Doesn't work with TypeScript
+        'no-unused-vars': 'off',
     },
 };

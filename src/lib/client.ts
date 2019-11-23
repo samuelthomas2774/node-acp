@@ -1,15 +1,14 @@
 
-import Session, {SessionLock} from './session'; // eslint-disable-line no-unused-vars
+import Session, {SessionLock} from './session';
 import Message from './message';
-import Property, {PropType, FormattedValues, PropertyWithValue} from './property'; // eslint-disable-line no-unused-vars
-import {PropName, PropTypes} from './properties'; // eslint-disable-line no-unused-vars
-import PropertyValueTypes from './property-types'; // eslint-disable-line no-unused-vars
+import Property, {PropType, FormattedValues, PropertyWithValue} from './property';
+import {PropName, PropTypes} from './properties';
+import PropertyValueTypes from './property-types';
 import CFLBinaryPList from './cflbinary';
 import {LogLevel, loglevel} from '..';
 
 import crypto from 'crypto';
 
-// eslint-disable-next-line no-unused-vars
 import srp, {SrpParams} from 'fast-srp-hap';
 import BigInteger from 'fast-srp-hap/lib/jsbn';
 

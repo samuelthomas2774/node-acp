@@ -1,6 +1,6 @@
 
 import CFLBinaryPList from './cflbinary';
-import acp_properties, {PropName, PropTypes} from './properties'; // eslint-disable-line no-unused-vars
+import acp_properties, {PropName, PropTypes} from './properties';
 import PropertyValueTypes from './property-types';
 import {replacer} from './util';
 import {LogLevel, loglevel} from '..';
@@ -158,7 +158,7 @@ const ValueInitialisers: {
             return buffer;
         }
 
-        throw new Error('Invalid hex value: ' + value);
+        throw new Error('Invalid hexadecimal value: ' + value);
     },
     mac(value) {
         if (typeof value === 'string' && value.length === 6) return Buffer.from(value, 'binary');
@@ -168,12 +168,12 @@ const ValueInitialisers: {
         }
         if (value instanceof Buffer && value.length === 6) return value;
 
-        throw new Error('Invalid mac value: ' + value);
+        throw new Error('Invalid MAC address value: ' + value);
     },
     bin(value) {
         if (value instanceof Buffer) return value;
         if (typeof value === 'string') return Buffer.from(value, 'binary');
-        throw new Error('Invalid bin value: ' + value);
+        throw new Error('Invalid binary value: ' + value);
     },
     cfb(value) {
         // TODO: validate this?
@@ -189,21 +189,21 @@ const ValueInitialisers: {
     str(value) {
         if (value instanceof Buffer) return value;
         if (typeof value === 'string') return Buffer.from(value, 'binary');
-        throw new Error('Invalid str value: ' + value);
+        throw new Error('Invalid string value: ' + value);
     },
     ip4(value) {
         if (typeof value === 'string' && value.length === 4) return Buffer.from(value, 'binary');
         if (typeof value === 'string') value = ip.parse(value).toBuffer();
         if (value instanceof Buffer && value.length === 4) return value;
 
-        throw new Error('Invalid ip4 value: ' + value);
+        throw new Error('Invalid IPv4 address value: ' + value);
     },
     ip6(value) {
         if (typeof value === 'string' && value.length === 16) return Buffer.from(value, 'binary');
         if (typeof value === 'string') value = ip.parse(value).toBuffer();
         if (value instanceof Buffer && value.length === 16) return value;
 
-        throw new Error('Invalid ip6 value: ' + value);
+        throw new Error('Invalid IPv6 address value: ' + value);
     },
     bpl(value) {
         if (value instanceof Buffer) return value;
@@ -217,8 +217,8 @@ const ValueInitialisers: {
             return Buffer.from(value.replace(/-/g, ''), 'hex');
         }
 
-        throw new Error('Invalid uid value: ' + value);
-    }
+        throw new Error('Invalid UUID value: ' + value);
+    },
 };
 
 export type FormattedValues = {
@@ -299,7 +299,7 @@ export const ValueFormatters: {
     uid(value) {
         return value.toString('hex')
             .replace(/^([0-9a-f]{8})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{12})$/, '$1-$2-$3-$4-$5');
-    }
+    },
 };
 
 export const HEADER_SIZE = 12;

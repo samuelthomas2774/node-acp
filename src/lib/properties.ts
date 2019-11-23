@@ -1,4 +1,3 @@
-// eslint-disable-next-line no-unused-vars
 import {PropType, SupportedValues} from './property';
 
 // Uncomment and fill out relevant fields to add support for a property
