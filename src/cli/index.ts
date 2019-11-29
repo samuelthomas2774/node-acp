@@ -5,6 +5,7 @@ import * as cfb from '../lib/cflbinary';
 import {createAdvertisementData, reviver, replacer} from '../lib/util';
 import yargs from 'yargs';
 import path from 'path';
+import util from 'util';
 
 yargs.demandCommand();
 yargs.help();
@@ -109,8 +110,20 @@ interface ClientCommandArguments extends GlobalArguments {
     encryption?: boolean;
 }
 
-const commandHandler = <A extends ClientCommandArguments = ClientCommandArguments>(handler: (client: Client, argv: A) => Monitor | Promise<Monitor> | void | Promise<void>) => async (argv: A) => {
-    const client = new Client(argv.host || 'airport-base-station.local', argv.port, argv.password!);
+const commandHandler = <A extends ClientCommandArguments = ClientCommandArguments>(handler: (client: Client, argv: A) => Monitor | undefined | void | Promise<Monitor | undefined | void>) => async (argv: A) => {
+    let password = argv.password;
+
+    if (!password) {
+        const {default: read} = await import('read');
+        const prompt = util.promisify(read);
+
+        password = await prompt({
+            prompt: `Password for ${argv.host || 'airport-base-station.local'}: `,
+            silent: true,
+        });
+    }
+
+    const client = new Client(argv.host || 'airport-base-station.local', argv.port, password);
 
     try {
         await client.connect();

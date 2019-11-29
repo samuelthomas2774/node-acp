@@ -36,6 +36,7 @@
         "fast-srp-hap": "^1.0.1",
         "ip6addr": "^0.2.3",
         "pump": "^3.0.0",
+        "read": "^1.0.7",
         "yargs": "^12.0.5"
     },
     "peerDependencies": {
@@ -46,6 +47,7 @@
         "@types/node": "^12.12.7",
         "@types/pump": "^1.1.0",
         "@types/qunit": "^2.9.0",
+        "@types/read": "0.0.28",
         "@types/yargs": "^13.0.3",
         "@typescript-eslint/parser": "^2.7.0",
         "eslint": "^4.19.1",
