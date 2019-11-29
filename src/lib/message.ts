@@ -46,12 +46,36 @@ export function generateACPHeaderKey(password: string) {
 export const HEADER_MAGIC = 'acpp';
 export const HEADER_SIZE = 128;
 
+export enum MessageType {
+    ECHO = 0x00000001,
+    FLASH_PRIMARY = 0x00000003,
+    FLASH_SECONDARY = 0x00000005,
+    FLASH_BOOTLOADER = 0x00000006,
+    GET_PROPERTY = 0x00000014,
+    SET_PROPERTY = 0x00000015,
+    PERFORM = 0x00000016,
+    MONITOR = 0x00000018,
+    RPC = 0x00000019,
+    AUTHENTICATE = 0x0000001a,
+    GET_FEATURES = 0x0000001b,
+}
+
+export enum ErrorCode {
+    // Get property
+    NOT_AVAILABLE = -10, // 0xfffffff6
+    INVALID_KEY = -16,
+    UNKNOWN_FFFFE58C = -6772, // 0xffffe58c - returned from raNm
+
+    // Authenticate
+    INCORRECT_PASSWORD = -6754,
+}
+
 class Message {
     readonly version: number;
     readonly flags: number;
     readonly unused: number;
-    readonly command: number;
-    readonly error_code: number;
+    readonly command: MessageType;
+    readonly error_code: ErrorCode;
     readonly key: Buffer;
     readonly body?: Buffer;
     readonly body_size: number;
@@ -69,7 +93,7 @@ class Message {
      * @param {string} body
      * @param {number} body_size
      */
-    constructor(version: number, flags: number, unused: number, command: number, error_code: number, key: Buffer | string, body?: Buffer | string, body_size?: number) {
+    constructor(version: number, flags: number, unused: number, command: MessageType, error_code: ErrorCode, key: Buffer | string, body?: Buffer | string, body_size?: number) {
         if (typeof body === 'string') body = Buffer.from(body, 'binary');
 
         this.version = version;
@@ -91,14 +115,15 @@ class Message {
     }
 
     toString() {
-        return 'ACP message:\n'
-            + 'Body checksum: ' + this.body_checksum
-            + 'Body size:     ' + this.body_size
-            + 'Flags:         ' + this.flags
-            + 'Unused:        ' + this.unused
-            + 'Command:       ' + this.command
-            + 'Error code:    ' + this.error_code
-            + 'Key:           ' + this.key;
+        return 'ACP message:'
+            + '\nBody checksum: ' + this.body_checksum
+            + '\nBody size:     ' + this.body_size
+            + '\nFlags:         ' + this.flags
+            + '\nUnused:        ' + this.unused
+            + '\nCommand:       ' + this.command + ' (' + MessageType[this.command] + ')'
+            + '\nError code:    ' + this.error_code +
+                (this.error_code !== 0 ? ' (' + ErrorCode[this.error_code] + ')' : '')
+            + '\nKey:           ' + this.key;
     }
 
     /**
@@ -228,53 +253,53 @@ class Message {
 
         const message = new Message(version, flags, unused, command, error_code, key, body_data, body_size);
 
-        if (return_remaining) return [message, data.slice(HEADER_SIZE + body_size)];
+        if (return_remaining) return [message, data.slice(HEADER_SIZE + (body_data ? body_data.length : 0))];
 
         return message;
     }
 
     static composeEchoCommand(flags: number, password: string, payload?: Buffer | string) {
-        return new Message(0x00030001, flags, 0, 1, 0, generateACPHeaderKey(password), payload);
+        return new Message(0x00030001, flags, 0, MessageType.ECHO, 0, generateACPHeaderKey(password), payload);
     }
 
     static composeFlashPrimaryCommand(flags: number, password: string, payload?: Buffer | string) {
-        return new Message(0x00030001, flags, 0, 3, 0, generateACPHeaderKey(password), payload);
+        return new Message(0x00030001, flags, 0, MessageType.FLASH_PRIMARY, 0, generateACPHeaderKey(password), payload);
     }
 
     static composeFlashSecondaryCommand(flags: number, password: string, payload?: Buffer | string) {
-        return new Message(0x00030001, flags, 0, 5, 0, generateACPHeaderKey(password), payload);
+        return new Message(0x00030001, flags, 0, MessageType.FLASH_SECONDARY, 0, generateACPHeaderKey(password), payload);
     }
 
     static composeFlashBootloaderCommand(flags: number, password: string, payload?: Buffer | string) {
-        return new Message(0x00030001, flags, 0, 6, 0, generateACPHeaderKey(password), payload);
+        return new Message(0x00030001, flags, 0, MessageType.FLASH_BOOTLOADER, 0, generateACPHeaderKey(password), payload);
     }
 
     static composeGetPropCommand(flags: number, password: string, payload?: Buffer | string) {
-        return new Message(0x00030001, flags, 0, 0x14, 0, generateACPHeaderKey(password), payload);
+        return new Message(0x00030001, flags, 0, MessageType.GET_PROPERTY, 0, generateACPHeaderKey(password), payload);
     }
 
     static composeSetPropCommand(flags: number, password: string, payload?: Buffer | string) {
-        return new Message(0x00030001, flags, 0, 0x15, 0, generateACPHeaderKey(password), payload);
+        return new Message(0x00030001, flags, 0, MessageType.SET_PROPERTY, 0, generateACPHeaderKey(password), payload);
     }
 
     static composePerformCommand(flags: number, password: string, payload?: Buffer | string) {
-        return new Message(0x00030001, flags, 0, 0x16, 0, generateACPHeaderKey(password), payload);
+        return new Message(0x00030001, flags, 0, MessageType.PERFORM, 0, generateACPHeaderKey(password), payload);
     }
 
     static composeMonitorCommand(flags: number, password: string, payload?: Buffer | string) {
-        return new Message(0x00030001, flags, 0, 0x18, 0, generateACPHeaderKey(password), payload);
+        return new Message(0x00030001, flags, 0, MessageType.MONITOR, 0, generateACPHeaderKey(password), payload);
     }
 
     static composeRPCCommand(flags: number, password: string, payload?: Buffer | string) {
-        return new Message(0x00030001, flags, 0, 0x19, 0, generateACPHeaderKey(password), payload);
+        return new Message(0x00030001, flags, 0, MessageType.RPC, 0, generateACPHeaderKey(password), payload);
     }
 
     static composeAuthCommand(flags: number, payload?: Buffer | string) {
-        return new Message(0x00030001, flags, 0, 0x1a, 0, generateACPHeaderKey(''), payload);
+        return new Message(0x00030001, flags, 0, MessageType.AUTHENTICATE, 0, generateACPHeaderKey(''), payload);
     }
 
     static composeFeatCommand(flags: number, payload?: Buffer | string) {
-        return new Message(0x00030001, flags, 0, 0x1b, 0, generateACPHeaderKey(''), payload);
+        return new Message(0x00030001, flags, 0, MessageType.GET_FEATURES, 0, generateACPHeaderKey(''), payload);
     }
 
     static composeMessageEx(version: number, flags: number, unused: number, command: number, error_code: number, password: string, payload?: Buffer | string, payload_size?: number) {
