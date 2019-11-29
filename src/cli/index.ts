@@ -414,7 +414,7 @@ yargs.command('monitor [prop]', 'Monitor an ACP property', yargs => {
 }));
 
 interface LogsArguments {
-    lines?: number;
+    lines: number;
     follow: boolean;
     encryption: boolean;
 }
@@ -422,7 +422,8 @@ interface LogsArguments {
 yargs.command('logs', 'Print logs', yargs => {
     yargs.option('lines', {
         alias: 'n',
-        describe: 'Lines',
+        describe: 'Number of lines to print',
+        default: -1,
         type: 'number',
     });
     yargs.option('follow', {
@@ -437,10 +438,13 @@ yargs.command('logs', 'Print logs', yargs => {
         type: 'boolean',
     });
 }, commandHandler(async (client, argv: GlobalArguments & LogsArguments) => {
-    const [logm] = await client.getProperties(['logm']);
-    const log = argv.lines ? logm.format().trim().split('\n').slice(- argv.lines).join('\n') : logm.format().trim();
+    if (argv.lines !== 0) {
+        const [logm] = await client.getProperties(['logm']);
+        const log = argv.lines >= 1 ? logm.format().trim().split('\n').slice(- argv.lines).join('\n') :
+            logm.format().trim();
 
-    console.log(log);
+        console.log(log);
+    }
 
     if (argv.follow) {
         const monitor = await client.monitor({filters: {logm: {}}});
