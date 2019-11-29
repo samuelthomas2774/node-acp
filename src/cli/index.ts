@@ -1,10 +1,10 @@
 
-import Client, {Server, Property, PropName, PropType, LogLevel, loglevel} from '..';
+import Client, {Server, Property, Monitor, PropName, PropType, LogLevel, loglevel} from '..';
 import {ValueFormatters} from '../lib/property';
 import * as cfb from '../lib/cflbinary';
 import {createAdvertisementData, reviver, replacer} from '../lib/util';
 import yargs from 'yargs';
-import bonjour from 'bonjour';
+import path from 'path';
 
 yargs.demandCommand();
 yargs.help();
@@ -18,15 +18,15 @@ interface GlobalArguments {
 
 yargs.option('host', {
     alias: 'h',
-    describe: 'The hostname/IP address of the AirPort device to connect to',
+    describe: 'The hostname/IP address of the AirPort base station to connect to',
 });
 yargs.option('port', {
-    describe: 'The port of the AirPort device\'s acp daemon (you should only need to change this when you need to use port forwarding to access the device)',
+    describe: 'The port of the AirPort base station\'s acp daemon (you should only need to change this when you need to use port forwarding to access the device)',
     default: 5009,
 });
 yargs.option('password', {
     alias: 'p',
-    describe: 'The device password of the AirPort device',
+    describe: 'The device password of the AirPort base station',
 });
 yargs.option('log', {
     decribe: 'Log level',
@@ -109,7 +109,7 @@ interface ClientCommandArguments extends GlobalArguments {
     encryption?: boolean;
 }
 
-const commandHandler = <A extends ClientCommandArguments = ClientCommandArguments>(handler: (client: Client, argv: A) => void) => async (argv: A) => {
+const commandHandler = <A extends ClientCommandArguments = ClientCommandArguments>(handler: (client: Client, argv: A) => Monitor | Promise<Monitor> | void | Promise<void>) => async (argv: A) => {
     const client = new Client(argv.host || 'airport-base-station.local', argv.port, argv.password!);
 
     try {
@@ -121,7 +121,10 @@ const commandHandler = <A extends ClientCommandArguments = ClientCommandArgument
             console.log('Authenticated!');
         }
 
-        await handler.call(undefined, client, argv);
+        const r = await handler.call(undefined, client, argv);
+
+        // Don't disconnect if we started a monitor session
+        if (r instanceof Monitor) return;
     } catch (err) {
         console.error(err);
     }
@@ -157,7 +160,7 @@ yargs.command('getprop <prop>', 'Get an ACP property', yargs => {
         type: 'boolean',
     });
     yargs.option('encryption', {
-        describe: 'Whether to encrypt connections to the AirPort device',
+        describe: 'Whether to encrypt connections to the AirPort base station',
         default: true,
         type: 'boolean',
     });
@@ -177,7 +180,7 @@ yargs.command('dump-debug <path>', 'Get an ACP property', yargs => {
         describe: 'Path to save to',
     });
     yargs.option('encryption', {
-        describe: 'Whether to encrypt connections to the AirPort device',
+        describe: 'Whether to encrypt connections to the AirPort base station',
         default: true,
         type: 'boolean',
     });
@@ -223,7 +226,7 @@ yargs.command('dumpprops <list>', 'Attempt to get an list of ACP properties and 
         type: 'boolean',
     });
     yargs.option('encryption', {
-        describe: 'Whether to encrypt connections to the AirPort device',
+        describe: 'Whether to encrypt connections to the AirPort base station',
         default: true,
         type: 'boolean',
     });
@@ -270,7 +273,7 @@ yargs.command('pokeprop <prop> [type]', 'Attempt to get an ACP property and gues
         type: 'boolean',
     });
     yargs.option('encryption', {
-        describe: 'Whether to encrypt connections to the AirPort device',
+        describe: 'Whether to encrypt connections to the AirPort base station',
         default: true,
         type: 'boolean',
     });
@@ -362,7 +365,7 @@ yargs.command('setprop <prop> <value>', 'Set an ACP property', yargs => {
         type: 'boolean',
     });
     yargs.option('encryption', {
-        describe: 'Whether to encrypt connections to the AirPort device',
+        describe: 'Whether to encrypt connections to the AirPort base station',
         default: true,
         type: 'boolean',
     });
@@ -373,9 +376,33 @@ yargs.command('setprop <prop> <value>', 'Set an ACP property', yargs => {
     console.log(props);
 }));
 
+interface MonitorArguments {
+    prop?: PropName;
+    encryption: boolean;
+}
+
+yargs.command('monitor [prop]', 'Monitor an ACP property', yargs => {
+    yargs.positional('prop', {
+        describe: 'The name of the ACP property',
+    });
+    yargs.option('encryption', {
+        describe: 'Whether to encrypt connections to the AirPort base station',
+        default: true,
+        type: 'boolean',
+    });
+}, commandHandler(async (client, argv: GlobalArguments & MonitorArguments) => {
+    const monitor = await client.monitor(argv.prop ? {filters: {[argv.prop]: {}}} : {});
+
+    monitor.on('data', data => {
+        console.log('Monitor data', data);
+    });
+
+    return monitor;
+}));
+
 yargs.command('features', 'Get supported features', yargs => {
     yargs.option('encryption', {
-        describe: 'Whether to encrypt connections to the AirPort device',
+        describe: 'Whether to encrypt connections to the AirPort base station',
         default: true,
         type: 'boolean',
     });
@@ -387,7 +414,7 @@ yargs.command('features', 'Get supported features', yargs => {
 
 yargs.command('reboot', 'Reboot', yargs => {
     yargs.option('encryption', {
-        describe: 'Whether to encrypt connections to the AirPort device',
+        describe: 'Whether to encrypt connections to the AirPort base station',
         default: true,
         type: 'boolean',
     });

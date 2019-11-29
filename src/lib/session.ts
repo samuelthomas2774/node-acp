@@ -2,7 +2,7 @@
 import Message, {HEADER_SIZE as MESSAGE_HEADER_SIZE} from './message';
 import {HEADER_SIZE as ELEMENT_HEADER_SIZE} from './property';
 // import {ClientEncryption, ServerEncryption} from './encryption';
-import {LogLevel, loglevel} from '..';
+import {LogLevel, loglevel, CFLBinaryPList} from '..';
 
 import adler32 from 'adler32';
 
@@ -47,7 +47,7 @@ export default class Session extends EventEmitter {
             this.socket = new net.Socket();
 
             setTimeout(() => {
-                this.reading -= 1;
+                // this.reading -= 1;
                 reject('Timeout');
             }, timeout);
 
@@ -61,6 +61,7 @@ export default class Session extends EventEmitter {
 
             this.socket.on('close', had_error => {
                 this.socket = null;
+                this.encryption = null;
                 this.emit('disconnected');
 
                 for (const reject of this._queue_rejects) reject();
@@ -79,8 +80,54 @@ export default class Session extends EventEmitter {
                 this.buffer = Buffer.concat([this.buffer, data]);
 
                 this.emit('data', data);
+
+                if (!this.reading) this._handleData(data);
             });
         });
+    }
+
+    /**
+     * Handles unsolicited data.
+     *
+     * @param {Buffer} data
+     */
+    private async _handleData(data: Buffer) {
+        while (!this.reading && this.buffer.length) {
+            try {
+                await this.handleData(this.buffer);
+            } catch (err) {
+                console.error('Error handling data', err);
+            }
+        }
+    }
+
+    async handleData(data: Buffer) {
+        // 58 45 00 95 00 00 00 6f + CFL binary plist
+        // 58 45 00 95 is header magic?
+        //             00 00 00 6f is the CFL binary plist length
+        // 58 45 00 45 00 00 00 72 + CFL binary plist
+        // 58 45 00 45 is header magic?
+        //             00 00 00 72 is the CFL binary plist length
+
+        if (data.slice(0, 2).toString('binary') === 'XE') return this.handleMonitorData();
+
+        console.warn('Unknown data received', data);
+        this.buffer = Buffer.alloc(0);
+    }
+
+    async handleMonitorData() {
+        const header = await this.receive(8);
+        const magic = header.slice(0, 4).toString('binary');
+        const size = header.readUInt32BE(4);
+        const body = await this.receive(size);
+
+        try {
+            const data = CFLBinaryPList.parse(body);
+
+            this.emit('monitor-data', data);
+        } catch (err) {
+            console.error('Error parsing monitor data', err);
+        }
     }
 
     /**

@@ -8,6 +8,7 @@ import CFLBinaryPList from './cflbinary';
 import {LogLevel, loglevel} from '..';
 
 import crypto from 'crypto';
+import {EventEmitter} from 'events';
 
 import srp, {SrpParams} from 'fast-srp-hap';
 import BigInteger from 'fast-srp-hap/lib/jsbn';
@@ -225,6 +226,22 @@ export default class Client {
     }
 
     /**
+     * Monitors ACP properties.
+     * After a monitor session is started sending other messages will result in the AirPort base station disconnecting.
+     *
+     * @param data
+     * @return {Promise<Monitor>}
+     */
+    async monitor(data: MonitorRequestData = {filters: {}}) {
+        const request = Message.composeMonitorCommand(0, this.password, Buffer.concat([
+            Buffer.from([0, 0, 0, 0]),
+            CFLBinaryPList.compose(data),
+        ]));
+        const response = await this.send(request);
+        return new Monitor(this, this.session, response);
+    }
+
+    /**
      * Gets the supported features on the AirPort device.
      *
      * @return {Promise<Array>}
@@ -383,7 +400,7 @@ export default class Client {
         const response = await session.receiveMessage();
 
         if (response.error_code !== 0) {
-            throw new Error('Authenticate stage 4 error code ' + response.error_code);
+            throw new Error('Authenticate stage 4 error code ' + response.error_code + ' response: ' + response.body!.toString('hex'));
         }
 
         const data_2 = CFLBinaryPList.parse(response.body!);
@@ -423,4 +440,50 @@ export default class Client {
         if (loglevel >= LogLevel.DEBUG) console.debug('Enabling encryption...');
         this.session.enableEncryption(key, client_iv, server_iv);
     }
+}
+
+type MonitorProp = 'logm' | 'ACPRemoteBonjour' | 'MaSt' | 'waCD' | 'waC1' | 'waRA' | 'daSt' | 'tACL' | 'dmSt' | 'waIP' | 'wsci' | 'sySt' | 'stat' | 'raCh' | 'waC2' | 'DynS' | 'prnR' | 'waSM' | 'iCld' | 'deSt';
+
+interface MonitorRequestData {
+    filters?: {
+        [K in MonitorProp]?: {};
+    };
+}
+
+type MonitorData = {
+    [K in MonitorProp]?: any;
+};
+
+export class Monitor extends EventEmitter {
+    private readonly _socket: import('net').Socket;
+
+    constructor(readonly client: Client, private readonly session: Session, private readonly response: Message) {
+        super();
+
+        this._socket = session.socket!;
+
+        this.session.on('monitor-data', this._handleMonitorData);
+        this.session.on('closed', this._handleDisconnected);
+    }
+
+    get active() {
+        return this._socket === this.session.socket;
+    }
+
+    private _handleMonitorData = (data: MonitorData) => {
+        this.emit('data', data);
+    }
+
+    private _handleDisconnected = () => {
+        this.emit('closed');
+    }
+}
+
+interface MonitorEvents {
+    data: (data: MonitorData) => void;
+    closed: () => void;
+}
+
+export interface Monitor {
+    on<E extends keyof MonitorEvents>(event: E, listener: MonitorEvents[E]): this;
 }
