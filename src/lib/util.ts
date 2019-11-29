@@ -2,6 +2,13 @@
 /** A MAC address, formatted as 00-00-00-00-00 */
 type MACAddress = string;
 
+import {WirelessNetworkMode} from './property-types';
+
+enum Model {
+    AIRPORT_EXPRESS_2ND_GENERATION = 115,
+    AIRPORT_EXTREME_6TH_GENERATION = 120,
+}
+
 export interface AdvertisementData {
     /** Ethernet MAC address */
     waMA: MACAddress;
@@ -15,14 +22,14 @@ export interface AdvertisementData {
     raCh: number;
     /** 5 GHz channel */
     rCh2: number;
-    /** ?? */
-    raSt: number;
-    /** ?? */
-    raNA: number;
+    /** Wireless network mode (0 - create a wireless network, 1 - join an existing wireless network, 3 - wireless disabled) */
+    raSt: WirelessNetworkMode;
+    /** Enable Network Address Translation */
+    raNA: boolean;
     /** Some hexidecimal flags - ?? */
     syFl: string; // '0x820C'
     /** Model */
-    syAP: number;
+    syAP: Model;
     /** Version */
     syVs: string;
     /** Source version */
@@ -40,25 +47,27 @@ export interface AdvertisementData {
  * @return {object}
  */
 export function createAdvertisementData(data: AdvertisementData): Record<string, string> {
-    if (!/^[0-9a-f]{2}(-[0-9a-f]{2}){5}$/i.test(data.waMA)) throw new Error('Invalid data');
-    if (!/^[0-9a-f]{2}(-[0-9a-f]{2}){5}$/i.test(data.raMA)) throw new Error('Invalid data');
-    if (!/^[0-9a-f]{2}(-[0-9a-f]{2}){5}$/i.test(data.raM2)) throw new Error('Invalid data');
-    if (typeof data.raNm !== 'string') throw new Error('Invalid data');
-    if (!/^0x[0-9a-f]+$/i.test(data.syFl)) throw new Error('Invalid data');
-    if (typeof data.raCh !== 'number') throw new Error('Invalid data');
-    if (typeof data.rCh2 !== 'number') throw new Error('Invalid data');
-    if (typeof data.raSt !== 'number') throw new Error('Invalid data');
-    if (typeof data.raNA !== 'number') throw new Error('Invalid data');
-    if (typeof data.syVs !== 'string') throw new Error('Invalid data');
-    if (typeof data.syAP !== 'number') throw new Error('Invalid data');
-    if (typeof data.srcv !== 'string') throw new Error('Invalid data');
-    if (typeof data.bjSd !== 'number') throw new Error('Invalid data');
-    if (data.hasOwnProperty('prob') && typeof data.prob !== 'string') throw new Error('Invalid data');
+    if (!/^[0-9a-f]{2}(-[0-9a-f]{2}){5}$/i.test(data.waMA)) throw new Error('Invalid data waMA');
+    if (!/^[0-9a-f]{2}(-[0-9a-f]{2}){5}$/i.test(data.raMA)) throw new Error('Invalid data raMA');
+    if (!/^[0-9a-f]{2}(-[0-9a-f]{2}){5}$/i.test(data.raM2)) throw new Error('Invalid data raM2');
+    if (typeof data.raNm !== 'string') throw new Error('Invalid data raNm');
+    if (!/^0x[0-9a-f]+$/i.test(data.syFl)) throw new Error('Invalid data syFl');
+    if (typeof data.raCh !== 'number') throw new Error('Invalid data raCh');
+    if (typeof data.rCh2 !== 'number') throw new Error('Invalid data rCh2');
+    if (![0, 1, 3].includes(data.raSt)) throw new Error('Invalid data raSt');
+    if (typeof data.raNA !== 'boolean') throw new Error('Invalid data raNA');
+    if (typeof data.syVs !== 'string') throw new Error('Invalid data syVs');
+    if (typeof data.syAP !== 'number') throw new Error('Invalid data syAP');
+    if (typeof data.srcv !== 'string') throw new Error('Invalid data srcv');
+    if (typeof data.bjSd !== 'number') throw new Error('Invalid data bjSd');
+    if (data.hasOwnProperty('prob') && typeof data.prob !== 'string') throw new Error('Invalid data prob');
 
     const result: Record<string, string> = {};
     let i: string | null = null;
 
-    for (const [key, value] of Object.entries(data)) {
+    for (let [key, value] of Object.entries(data) as [keyof AdvertisementData, AdvertisementData[keyof AdvertisementData]][]) {
+        if (typeof value === 'boolean') value = value ? 1 : 0;
+
         if (typeof i === 'string') {
             result[i] = `${result[i]},${key}=${value}`;
         } else {
@@ -93,7 +102,7 @@ export function getAdvertisementData(data: Record<string, string>): Advertisemen
     result.raCh = parseInt('' + result.raCh);
     result.rCh2 = parseInt('' + result.rCh2);
     result.raSt = parseInt('' + result.raSt);
-    result.raNA = parseInt('' + result.raNA);
+    result.raNA = !!parseInt('' + result.raNA);
     if (!result.syVs) throw new Error('Invalid data');
     result.syAP = parseInt('' + result.syAP);
     if (!result.srcv) throw new Error('Invalid data');

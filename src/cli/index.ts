@@ -49,7 +49,8 @@ interface ServerArguments {
 yargs.command('server', 'Start the ACP server', yargs => {
     yargs.option('advertise', {
         describe: 'Whether to advertise the ACP server with DNS SD',
-        boolean: true,
+        type: 'boolean',
+        default: true,
     });
     yargs.option('advertise-name', {
         describe: 'The name to advertise the service as',
@@ -77,27 +78,28 @@ yargs.command('server', 'Start the ACP server', yargs => {
     // Leave the server to run
 
     if (argv.advertise) {
-        const service = bonjour().publish({
+        const mdns = await import('mdns');
+
+        const service = mdns.createAdvertisement(mdns.tcp('airport'), argv.port, {
             name: argv['advertise-name'],
-            port: argv.port,
-            type: 'airport',
-            txt: createAdvertisementData({
+            txtRecord: createAdvertisementData({
                 waMA: '00-00-00-00-00-00', // Ethernet MAC address
                 raMA: argv['advertise-address'], // 5 GHz Wi-Fi MAC address - this is used to identify devices in AirPort Utility
                 raM2: '00-00-00-00-00-00', // 2.4 GHz Wi-Fi MAC address
                 raNm: argv['advertise-network'], // Network
                 raCh: 1, // 2.4 GHz channel
                 rCh2: 36, // 5 GHz channel
-                raSt: 0, // ?
-                raNA: 0, // ?
+                raSt: 0, // Wireless network mode
+                raNA: true, // Enable NAT
                 syFl: '0x820C', // ?
-                syAP: 115, // Model?
+                syAP: 115, // Model
                 syVs: '7.8', // Version
                 srcv: '78000.12', // Build
                 bjSd: 43, // ?
                 // prob: '',
             }),
         });
+        service.start();
 
         console.log('Advertising service', service);
     }
