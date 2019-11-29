@@ -9,6 +9,7 @@ import {LogLevel, loglevel} from '..';
 
 import crypto from 'crypto';
 import {EventEmitter} from 'events';
+import stream from 'stream';
 
 import srp, {SrpParams} from 'fast-srp-hap';
 import BigInteger from 'fast-srp-hap/lib/jsbn';
@@ -454,11 +455,14 @@ type MonitorData = {
     [K in MonitorProp]?: any;
 };
 
-export class Monitor extends EventEmitter {
+export class Monitor extends stream.Readable {
     private readonly _socket: import('net').Socket;
 
     constructor(readonly client: Client, private readonly session: Session, private readonly response: Message) {
-        super();
+        super({
+            read: size => {},
+            objectMode: true,
+        });
 
         this._socket = session.socket!;
 
@@ -471,19 +475,10 @@ export class Monitor extends EventEmitter {
     }
 
     private _handleMonitorData = (data: MonitorData) => {
-        this.emit('data', data);
+        this.push(data);
     }
 
     private _handleDisconnected = () => {
-        this.emit('closed');
+        this.push(null);
     }
-}
-
-interface MonitorEvents {
-    data: (data: MonitorData) => void;
-    closed: () => void;
-}
-
-export interface Monitor {
-    on<E extends keyof MonitorEvents>(event: E, listener: MonitorEvents[E]): this;
 }
