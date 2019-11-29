@@ -413,6 +413,48 @@ yargs.command('monitor [prop]', 'Monitor an ACP property', yargs => {
     return monitor;
 }));
 
+interface LogsArguments {
+    lines?: number;
+    follow: boolean;
+    encryption: boolean;
+}
+
+yargs.command('logs', 'Print logs', yargs => {
+    yargs.option('lines', {
+        alias: 'n',
+        describe: 'Lines',
+        type: 'number',
+    });
+    yargs.option('follow', {
+        alias: 'f',
+        describe: 'Follow log data',
+        default: false,
+        type: 'boolean',
+    });
+    yargs.option('encryption', {
+        describe: 'Whether to encrypt connections to the AirPort base station',
+        default: true,
+        type: 'boolean',
+    });
+}, commandHandler(async (client, argv: GlobalArguments & LogsArguments) => {
+    const [logm] = await client.getProperties(['logm']);
+    const log = argv.lines ? logm.format().trim().split('\n').slice(- argv.lines).join('\n') : logm.format().trim();
+
+    console.log(log);
+
+    if (argv.follow) {
+        const monitor = await client.monitor({filters: {logm: {}}});
+
+        monitor.on('data', data => {
+            if (!('logm' in data)) return;
+
+            console.log(data.logm);
+        });
+
+        return monitor;
+    }
+}));
+
 yargs.command('features', 'Get supported features', yargs => {
     yargs.option('encryption', {
         describe: 'Whether to encrypt connections to the AirPort base station',
