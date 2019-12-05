@@ -481,6 +481,23 @@ yargs.command('reboot', 'Reboot', yargs => {
     await client.reboot();
 }));
 
+interface ACPDataArguments extends GlobalArguments {
+    file: string;
+}
+
+yargs.command('parsedata <file>', 'Read ACPData.bin files', yargs => {
+    yargs.positional('file', {
+        describe: 'Path of the ACPData.bin file',
+    });
+}, async (argv: ACPDataArguments) => {
+    const {default: ACPData} = await import('../lib/acpdata');
+    const {promises: fs} = await import('fs');
+
+    const data = await ACPData.load(argv.file);
+
+    console.log(data.toJSON());
+});
+
 interface FirmwareCommandArguments extends GlobalArguments {
     input: string;
     output: string;
