@@ -71,4 +71,19 @@ export default class TestServer extends Server {
         this.modified = true;
         throw this.properties[prop.name] = new Error('Unknown property');
     }
+
+    async setProperties(props: Property[]) {
+        const ret = await super.setProperties(props);
+        if (this.modified) {
+            // fs.writeFileSync('properties.json', JSON.stringify(this.properties, replacer, 4) + '\n', 'utf-8');
+            await this.storage.setItem('Properties', this.properties);
+            this.modified = false;
+        }
+        return ret;
+    }
+
+    async setProperty(prop: Property) {
+        this.properties[prop.name] = prop.format();
+        this.modified = true;
+    }
 }
