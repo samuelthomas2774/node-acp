@@ -82,7 +82,7 @@ acp --host airport-base-station.local --password testing reboot
 curl -o firmware-120-7.9.1.basebinary http://apsu.apple.com/data/120/091-55931-20190530-b543691f-bb62-4017-96ca-288e4b0c8207/7.9.1.basebinary
 [ "`cat firmware-120-7.9.1.basebinary | openssl dgst -sha256`" == "b6eb7068ef890ba1cae8cfe17a54be3811b77fe5eb918f3d9fda23b8ff7841d7" ] || exit 1
 
-acp firmware-decrypt firmware-120-7.9.1.basebinary firmware-120-7.9.1-decrypted-1.basebinary
-acp firmware-decrypt firmware-120-7.9.1-decrypted-1.basebinary firmware-120-7.9.1-decrypted-2.gzimg
-acp firmware-extract firmware-120-7.9.1-decrypted-2.gzimg firmware-120-7.9.1-extracted.img
+airport-firmware decrypt firmware-120-7.9.1.basebinary firmware-120-7.9.1-decrypted-1.basebinary
+airport-firmware decrypt firmware-120-7.9.1-decrypted-1.basebinary firmware-120-7.9.1-decrypted-2.gzimg
+airport-firmware extract firmware-120-7.9.1-decrypted-2.gzimg firmware-120-7.9.1-extracted.img
 ```

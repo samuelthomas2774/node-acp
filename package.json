@@ -17,7 +17,8 @@
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "bin": {
-        "acp": "bin/acp"
+        "acp": "bin/acp",
+        "airport-firmware": "bin/airport-firmware"
     },
     "files": [
         "dist/index.js",

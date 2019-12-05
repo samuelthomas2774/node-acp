@@ -49,7 +49,7 @@ then
     echo "[1/6] Testing decrypting first image"
 
     # python -m acp --decrypt test.basebinary decrypted-1.basebinary
-    acp firmware-decrypt test.basebinary decrypted-1.basebinary
+    airport-firmware decrypt test.basebinary decrypted-1.basebinary
     EXIT=$?
     if [ "$EXIT" != 0 ] ; then rm decrypted-1.basebinary ; exit $EXIT ; fi
 
@@ -71,7 +71,7 @@ then
     echo "[2/6] Testing decrypting first image without streams"
 
     # python -m acp --decrypt test.basebinary decrypted-1.basebinary
-    acp firmware-decrypt test.basebinary decrypted-1-buffered.basebinary --mode buffer
+    airport-firmware decrypt test.basebinary decrypted-1-buffered.basebinary --mode buffer
     EXIT=$?
     if [ "$EXIT" != 0 ] ; then rm decrypted-1-buffered.basebinary ; exit $EXIT ; fi
 
@@ -93,7 +93,7 @@ then
     echo "[3/6] Testing decrypting internal image"
 
     # python -m acp --decrypt decrypted-1.basebinary decrypted-2.basebinary
-    acp firmware-decrypt decrypted-1.basebinary decrypted-2.basebinary
+    airport-firmware decrypt decrypted-1.basebinary decrypted-2.basebinary
     EXIT=$?
     if [ "$EXIT" != 0 ] ; then rm decrypted-2.basebinary ; exit $EXIT ; fi
 
@@ -115,7 +115,7 @@ then
     echo "[4/6] Testing decrypting internal image without streams"
 
     # python -m acp --decrypt decrypted-1.basebinary decrypted-2.basebinary
-    acp firmware-decrypt decrypted-1.basebinary decrypted-2-buffered.basebinary --mode buffer
+    airport-firmware decrypt decrypted-1.basebinary decrypted-2-buffered.basebinary --mode buffer
     EXIT=$?
     if [ "$EXIT" != 0 ] ; then rm decrypted-2-buffered.basebinary ; exit $EXIT ; fi
 
@@ -137,7 +137,7 @@ then
     echo "[5/6] Testing extracting gzimg"
 
     # python -m acp --extract decrypted-2.basebinary extracted.basebinary
-    acp firmware-extract decrypted-2.basebinary extracted.basebinary
+    airport-firmware extract decrypted-2.basebinary extracted.basebinary
     EXIT=$?
     if [ "$EXIT" != 0 ] ; then rm extracted.basebinary ; exit $EXIT ; fi
 
@@ -159,7 +159,7 @@ then
     echo "[6/6] Testing extracting gzimg without streams"
 
     # python -m acp --extract decrypted-2.basebinary extracted.basebinary
-    acp firmware-extract decrypted-2.basebinary extracted-buffered.basebinary --mode buffer
+    airport-firmware extract decrypted-2.basebinary extracted-buffered.basebinary --mode buffer
     EXIT=$?
     if [ "$EXIT" != 0 ] ; then rm extracted-buffered.basebinary ; exit $EXIT ; fi
 

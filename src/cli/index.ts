@@ -36,7 +36,7 @@ yargs.option('log', {
 });
 
 yargs.command('version', 'Shows the node-acp version', () => {}, argv => {
-    console.log('node-acp v' + require('../package').version);
+    console.log('node-acp v' + require('../../package').version);
     console.log('https://gitlab.fancy.org.uk/samuel/node-acp');
 });
 
@@ -501,79 +501,10 @@ yargs.command('parsedata <file>', 'Read ACPData.bin files', yargs => {
     });
 }, async (argv: ACPDataArguments) => {
     const {default: ACPData} = await import('../lib/acpdata');
-    const {promises: fs} = await import('fs');
 
     const data = await ACPData.load(argv.file);
 
     console.log(data.toJSON());
-});
-
-interface FirmwareCommandArguments extends GlobalArguments {
-    input: string;
-    output: string;
-    mode: 'stream' | 'buffer';
-}
-
-yargs.command('firmware-decrypt <input> <output>', 'Decrypt firmware file', yargs => {
-    yargs.positional('input', {
-        describe: 'Firmware file to decrypt',
-    });
-    yargs.positional('output', {
-        describe: 'Path to write the decrypted firmware file',
-    });
-
-    yargs.option('mode', {
-        describe: 'Whether to read the whole file (buffer) or use streams (stream)',
-        type: 'string',
-        default: 'stream',
-    });
-}, async (argv: FirmwareCommandArguments) => {
-    const {createReadStream, createWriteStream, promises: {readFile, writeFile}} = await import('fs');
-    const {parse} = await import('../lib/firmware');
-    const {default: pump} = await import('pump');
-
-    if (argv.mode === 'buffer') {
-        const encrypted = await readFile(argv.input);
-        const decrypted = parse(encrypted);
-        await writeFile(argv.output, decrypted);
-    } else {
-        await new Promise((rs, rj) => pump([
-            createReadStream(argv.input),
-            parse(),
-            createWriteStream(argv.output),
-        ], err => err ? rj(err) : rs()));
-    }
-});
-
-yargs.command('firmware-extract <input> <output>', 'Extract gzimg from a firmware file', yargs => {
-    yargs.positional('input', {
-        describe: 'Decrypted firmware file to extract',
-    });
-    yargs.positional('output', {
-        describe: 'Path to write the extracted gzimg',
-    });
-
-    yargs.option('mode', {
-        describe: 'Whether to read the whole file (buffer) or use streams (stream)',
-        type: 'string',
-        default: 'stream',
-    });
-}, async (argv: FirmwareCommandArguments) => {
-    const {createReadStream, createWriteStream, promises: {readFile, writeFile}} = await import('fs');
-    const {extract} = await import('../lib/firmware');
-    const {default: pump} = await import('pump');
-
-    if (argv.mode === 'buffer') {
-        const decrypted = await readFile(argv.input);
-        const decompressed = await extract(decrypted);
-        await writeFile(argv.output, decompressed);
-    } else {
-        await new Promise((rs, rj) => pump([
-            createReadStream(argv.input),
-            extract(),
-            createWriteStream(argv.output),
-        ], err => err ? rj(err) : rs()));
-    }
 });
 
 const argv = yargs.argv as unknown as GlobalArguments;
