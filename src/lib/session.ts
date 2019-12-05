@@ -355,7 +355,7 @@ export default interface Session {
 
     eventNames(): (keyof Events)[];
     listenerCount<E extends keyof Events>(type: E): number;
-}
+} // eslint-disable-line semi
 
 export class SessionLock {
     constructor(private session: Session | null) {}

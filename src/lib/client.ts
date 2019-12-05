@@ -225,7 +225,7 @@ export default class Client {
      * Monitors ACP properties.
      * After a monitor session is started sending other messages will result in the AirPort base station disconnecting.
      *
-     * @param data
+     * @param {object} data
      * @return {Promise<Monitor>}
      */
     async monitor(data: MonitorRequestData = {filters: {}}) {
@@ -477,10 +477,12 @@ export class Monitor extends stream.Readable {
     }
 
     private _handleMonitorData = (data: MonitorData) => {
+        // eslint-disable-next-line no-invalid-this
         this.push(data);
     }
 
     private _handleDisconnected = () => {
+        // eslint-disable-next-line no-invalid-this
         this.push(null);
     }
 }

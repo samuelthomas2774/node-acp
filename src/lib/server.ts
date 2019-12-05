@@ -177,10 +177,10 @@ export default abstract class Server {
         session.messages.push(message);
 
         switch (message.command) {
-            case MessageType.AUTHENTICATE: return this.handleAuthenticateMessage(session, message);
-            case MessageType.GET_PROPERTY: return this.handleGetPropertyMessage(session, message);
-            case MessageType.MONITOR: return this.handleMonitorMessage(session, message);
-            case MessageType.RPC: return this.handleRPCMessage(session, message);
+        case MessageType.AUTHENTICATE: return this.handleAuthenticateMessage(session, message);
+        case MessageType.GET_PROPERTY: return this.handleGetPropertyMessage(session, message);
+        case MessageType.MONITOR: return this.handleMonitorMessage(session, message);
+        case MessageType.RPC: return this.handleRPCMessage(session, message);
         }
 
         if (loglevel >= LogLevel.INFO) console.error('Unknown command', message.command, message);
