@@ -112,12 +112,19 @@ export function getAdvertisementData(data: Record<string, string>): Advertisemen
 }
 
 export function reviver(key: string, value: any) {
-    if (typeof value === 'object') {
+    if (typeof value === 'object' && value !== null) {
         const keys = Object.keys(value);
 
         if (keys.length === 2 && keys.includes('type') && keys.includes('data') && value.type === 'Buffer') return Buffer.from(value.data);
         // eslint-disable-next-line new-cap
         if (keys.length === 2 && keys.includes('type') && keys.includes('data') && value.type === 'bigint') return BigInt(value.data);
+        if (keys.length === 2 && keys.includes('type') && keys.includes('data') && value.type === 'Error') {
+            const error = new Error(value.data.message);
+            // @ts-ignore
+            error.code = value.data.code;
+            error.stack = value.data.stack;
+            return error;
+        }
     }
 
     return value;
@@ -125,6 +132,40 @@ export function reviver(key: string, value: any) {
 
 export function replacer(key: string, value: any) {
     if (typeof value === 'bigint') return {type: 'bigint', data: value.toString()};
+    // @ts-ignore
+    if (value instanceof Error) return {type: 'Error', data: {message: value.message, code: value.code, stack: value.stack}};
 
     return value;
+}
+
+const UUID_REGEX = /^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
+
+export class UUID {
+    readonly value: Buffer;
+
+    constructor(value: Buffer | string) {
+        if (typeof value === 'string' && value.length === 16) {
+            value = Buffer.from(value, 'binary');
+        }
+        if (typeof value === 'string' && value.length === 36 && UUID_REGEX.test(value)) {
+            value = Buffer.from(value.replace(/-/g, ''), 'hex');
+        }
+
+        if (!(value instanceof Buffer) || value.length !== 16) {
+            throw new Error('Invalid UUID data');
+        }
+
+        this.value = value;
+    }
+
+    toString() {
+        return this.value.toString('hex')
+            .replace(/^([0-9a-f]{8})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{12})$/, '$1-$2-$3-$4-$5');
+    }
+
+    toBuffer() {
+        const value = Buffer.alloc(16);
+        this.value.copy(value);
+        return value;
+    }
 }

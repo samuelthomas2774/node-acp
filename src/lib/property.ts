@@ -2,7 +2,7 @@
 import CFLBinaryPList from './cflbinary';
 import acp_properties, {PropName, PropTypes} from './properties';
 import PropertyValueTypes from './property-types';
-import {replacer} from './util';
+import {UUID, replacer} from './util';
 import {LogLevel, loglevel} from '..';
 
 import ip from 'ip6addr';
@@ -11,7 +11,7 @@ import composeBPList from 'bplist-creator';
 
 export type PropType = keyof SupportedValues;
 
-interface PropData<N extends PropName = any, T extends PropType = PropTypes[N]> {
+interface PropData<N extends PropName = PropName, T extends PropType = PropTypes[N]> {
     name: N;
     type: T;
     description: string;
@@ -64,7 +64,7 @@ export type SupportedValues = {
     ip4: Buffer | string;
     ip6: Buffer | string;
     bpl: any;
-    uid: Buffer | string;
+    uid: Buffer | string | UUID;
 };
 
 const ValueInitialisers: {
@@ -193,7 +193,7 @@ const ValueInitialisers: {
     },
     ip4(value) {
         if (typeof value === 'string' && value.length === 4) return Buffer.from(value, 'binary');
-        if (typeof value === 'string') value = ip.parse(value).toBuffer();
+        if (typeof value === 'string') return ip.parse(value).toBuffer().slice(12, 16);
         if (value instanceof Buffer && value.length === 4) return value;
 
         throw new Error('Invalid IPv4 address value: ' + value);
@@ -211,13 +211,8 @@ const ValueInitialisers: {
         return composeBPList(value);
     },
     uid(value) {
-        if (value instanceof Buffer && value.length === 16) return value;
-        if (typeof value === 'string' && value.length === 16) return Buffer.from(value, 'binary');
-        if (typeof value === 'string' && /^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(value)) {
-            return Buffer.from(value.replace(/-/g, ''), 'hex');
-        }
-
-        throw new Error('Invalid UUID value: ' + value);
+        if (!(value instanceof UUID)) value = new UUID(value);
+        return value.toBuffer();
     },
 };
 
@@ -237,7 +232,7 @@ export type FormattedValues = {
     ip4: string;
     ip6: string;
     bpl: any;
-    uid: string;
+    uid: UUID;
 };
 
 export const ValueFormatters: {
@@ -297,8 +292,7 @@ export const ValueFormatters: {
         return parseBPList(value)[0];
     },
     uid(value) {
-        return value.toString('hex')
-            .replace(/^([0-9a-f]{8})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{12})$/, '$1-$2-$3-$4-$5');
+        return new UUID(value);
     },
 };
 
@@ -306,7 +300,8 @@ export const HEADER_SIZE = 12;
 
 class Property<
     N extends PropName = any, T extends PropType = PropTypes[N],
-    V = N extends keyof PropertyValueTypes ? PropertyValueTypes[N] : FormattedValues[T]
+    V = N extends keyof PropertyValueTypes ? PropertyValueTypes[N] : FormattedValues[T],
+    Sv = N extends keyof PropertyValueTypes ? PropertyValueTypes[N] : SupportedValues[T]
 > {
     readonly name: N | undefined;
     readonly value: Buffer | undefined;
@@ -317,22 +312,24 @@ class Property<
      * @param {string} name
      * @param {string} value
      */
-    constructor(name?: N | '\0\0\0\0', value?: Buffer | string | SupportedValues[T]) {
+    constructor(name?: N | '\0\0\0\0', value?: Buffer, force?: true)
+    constructor(name?: N | '\0\0\0\0', value?: Buffer | string | Sv, force?: boolean)
+    constructor(name?: N | '\0\0\0\0', value?: Buffer | string | Sv, force = false) {
         if (name === '\x00\x00\x00\x00') {
             name = undefined;
             value = undefined;
         }
 
-        if (name && !this.constructor.getSupportedPropertyNames().includes(name)) {
+        if (name && !this.constructor.getSupportedPropertyNames().includes(name) && !force) {
             throw new Error('Invalid property name passed to Property constructor: ' + name);
         }
 
-        if (value) {
+        if (value && !force) {
             const prop_type = this.constructor.getPropertyInfoString(name as N, 'type') as PropType;
 
             if (!prop_type || !ValueInitialisers[prop_type]) throw new Error(`Missing handler for ${prop_type} property type`);
 
-            const v: Buffer = value = ValueInitialisers[prop_type](value);
+            const v: Buffer = value = ValueInitialisers[prop_type](value as any);
 
             const validator = this.constructor.getPropertyInfoString(name as N, 'validator');
             if (validator && !validator(v, name as N)) {
