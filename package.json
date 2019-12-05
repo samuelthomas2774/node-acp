@@ -24,7 +24,8 @@
         "dist/index.d.ts",
         "dist/lib",
         "dist/cli",
-        "bin"
+        "bin",
+        "resources"
     ],
     "scripts": {
         "test": "qunit dist/test/**.js"
