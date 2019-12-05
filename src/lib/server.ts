@@ -10,7 +10,6 @@ import {LogLevel, loglevel} from '..';
 import net from 'net';
 import crypto from 'crypto';
 import * as srp from 'fast-srp-hap';
-import adler32 from 'adler32';
 
 export default abstract class Server {
     readonly host: string;

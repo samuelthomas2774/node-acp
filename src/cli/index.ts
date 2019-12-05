@@ -262,7 +262,7 @@ yargs.command('dumpprops <list>', 'Attempt to get an list of ACP properties and 
 
     for (const prop of propnames) {
         _props.unshift({
-            name: prop,
+            name: prop as PropName,
             type: 'bin',
             description: '',
             validator: undefined,
@@ -303,6 +303,7 @@ yargs.command('pokeprop <prop> [type]', 'Attempt to get an ACP property and gues
     const {props: _props} = await import('../lib/property');
     _props.unshift({
         name: argv.prop,
+        // @ts-ignore
         type: argv.type || 'bin',
         description: '',
         validator: undefined,

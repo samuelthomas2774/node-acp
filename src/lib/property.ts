@@ -42,6 +42,7 @@ export function generateACPProperties() {
             validator = value => !!valid_values.find(v => v.equals(value));
         }
 
+        // @ts-ignore
         props.push({name, type, description, validator});
     }
 
@@ -373,10 +374,12 @@ class Property<
         return props.find(p => p.name === this.name);
     }
 
-    static getPropertyInfoString<T extends keyof PropData>(propName: string, key: T): PropData[T] {
+    static getPropertyInfoString<N extends PropName, T extends keyof PropData<N>>(propName: N, key: T): PropData<N>[T]
+    static getPropertyInfoString<T extends keyof PropData>(propName: PropName, key: T): PropData[T] | undefined
+    static getPropertyInfoString<N extends PropName, T extends keyof PropData<N>>(propName: N, key: T): PropData<N>[T] | undefined {
         if (!propName) return;
 
-        const prop = props.find(p => p.name === propName);
+        const prop = props.find(p => p.name === propName) as PropData<N> | undefined;
 
         if (!prop) {
             if (loglevel >= LogLevel.WARNING) console.warn('Property', propName, 'not supported');

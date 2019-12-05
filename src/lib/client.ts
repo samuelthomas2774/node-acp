@@ -9,7 +9,6 @@ import CFLBinaryPList from './cflbinary';
 import {LogLevel, loglevel} from '..';
 
 import crypto from 'crypto';
-import {EventEmitter} from 'events';
 import stream from 'stream';
 
 import srp, {SrpParams} from 'fast-srp-hap';
@@ -470,7 +469,7 @@ export class Monitor extends stream.Readable {
         this._socket = session.socket!;
 
         this.session.on('monitor-data', this._handleMonitorData);
-        this.session.on('closed', this._handleDisconnected);
+        this.session.on('disconnected', this._handleDisconnected);
     }
 
     get active() {

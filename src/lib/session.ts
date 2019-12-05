@@ -331,6 +331,32 @@ export default class Session extends EventEmitter {
     }
 }
 
+type Events = {
+    'connected': (this: Session) => void;
+    'disconnected': (this: Session) => void;
+    'raw-data': (this: Session, data: Buffer) => void;
+    'data': (this: Session, data: Buffer) => void;
+    'monitor-data': (this: Session, data: any) => void;
+};
+
+export default interface Session {
+    addListener<E extends keyof Events>(event: E, listener: Events[E]): this;
+    on<E extends keyof Events>(event: E, listener: Events[E]): this;
+    once<E extends keyof Events>(event: E, listener: Events[E]): this;
+    prependListener<E extends keyof Events>(event: E, listener: Events[E]): this;
+    prependOnceListener<E extends keyof Events>(event: E, listener: Events[E]): this;
+    removeListener<E extends keyof Events>(event: E, listener: Events[E]): this;
+    off<E extends keyof Events>(event: E, listener: Events[E]): this;
+    removeAllListeners<E extends keyof Events>(event: E): this;
+    listeners<E extends keyof Events>(event: E): Events[E][];
+    rawListeners<E extends keyof Events>(event: E): Events[E][];
+
+    emit<E extends keyof Events>(event: E, ...data: any[]): boolean;
+
+    eventNames(): (keyof Events)[];
+    listenerCount<E extends keyof Events>(type: E): number;
+}
+
 export class SessionLock {
     constructor(private session: Session | null) {}
 

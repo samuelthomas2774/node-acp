@@ -49,7 +49,7 @@ export default class ACPData extends Map<PropName, Buffer> {
         let remaining_data = body;
 
         while (remaining_data.length) {
-            const name = remaining_data.slice(0, 4).toString('utf-8');
+            const name = remaining_data.slice(0, 4).toString('utf-8') as PropName;
             const length1 = remaining_data.readUInt32BE(4);
             const length = remaining_data.readUInt32BE(8);
             const value = remaining_data.slice(12, 12 + length);
