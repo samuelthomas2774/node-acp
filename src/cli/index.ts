@@ -1,5 +1,5 @@
 
-import Client, {Server, Property, Monitor, PropName, PropType, LogLevel, loglevel} from '..';
+import Client, {Property, Monitor, PropName, PropType, LogLevel, loglevel} from '..';
 import {ValueFormatters} from '../lib/property';
 import * as cfb from '../lib/cflbinary';
 import {createAdvertisementData, reviver, replacer} from '../lib/util';
@@ -66,9 +66,18 @@ yargs.command('server', 'Start the ACP server', yargs => {
         default: '00-00-00-00-00-00',
     });
 }, async (argv: GlobalArguments & ServerArguments) => {
-    const server = new Server(argv.host || '::', argv.port);
+    const {default: TestServer} = await import('./server');
+    const persist = await import('node-persist');
 
-    await server.addUser('admin', argv.password!);
+    const storage = persist.create({
+        dir: path.resolve(process.cwd(), 'server-data'),
+        stringify: data => JSON.stringify(data, replacer, 4) + '\n',
+        parse: data => JSON.parse(data, reviver),
+    });
+    await storage.init();
+
+    const server = new TestServer(argv.host || '::', argv.port, argv.password || 'testing', storage);
+    server.properties = await storage.getItem('Properties') || {};
 
     try {
         await server.listen();
