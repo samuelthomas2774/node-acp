@@ -197,10 +197,10 @@ export enum StatusCode {
     ETHERNET_UNPLUGGED = 'waNL',
     UPDATE_AVAILABLE = 'upAv',
     UNRECOGNIZED_APPLE_ID_PASSWORD = 'iCPW',
-    UNKNOWN_DUBN = 'DubN',
-    UNKNOWN_6RDN = '6rdn',
-    UNKNOWN_OPNW = 'opNW',
-    UNKNOWN_PPNS = 'ppNS',
+    DOUBLE_NAT = 'DubN',
+    IPV6_RELAY_ERROR = '6rdn',
+    UNSECURED_WIRELESS_NETWORK = 'opNW',
+    PPPOE_SERVER = 'ppNS',
 }
 
 type StatusCodes = 'waCF' | 'usbf' | 'waNL' | 'upAv' | 'iCPW' | 'DubN' | '6rdn' | 'opNW' | 'ppNS';
