@@ -401,7 +401,7 @@ export default class Client {
         const response = await session.receiveMessage();
 
         if (response.error_code !== 0) {
-            throw new Error('Authenticate stage 4 error code ' + response.error_code + ' response: ' + response.body!.toString('hex'));
+            throw new Error('Authenticate stage 4 error code ' + response.error_code);
         }
 
         const data_2 = CFLBinaryPList.parse(response.body!);

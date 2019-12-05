@@ -102,12 +102,12 @@ class Message {
         this.command = command;
         this.error_code = error_code;
 
-        if (typeof body === 'undefined') {
-            this.body_size = typeof body_size !== 'undefined' ? body_size : -1;
-            this.body_checksum = 1;
-        } else {
+        if (body instanceof Buffer || typeof body === 'string') {
             this.body_size = typeof body_size !== 'undefined' ? body_size : body.length;
             this.body_checksum = adler32.sum(body);
+        } else {
+            this.body_size = typeof body_size !== 'undefined' ? body_size : -1;
+            this.body_checksum = 1;
         }
 
         this.key = key instanceof Buffer ? key : Buffer.from(key, 'binary');
