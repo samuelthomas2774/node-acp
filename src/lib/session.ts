@@ -160,14 +160,14 @@ export default class Session extends EventEmitter {
         const {body_checksum} = Message.unpackHeader(raw_header);
         const message = await Message.parseRaw(raw_header);
 
-        const data = await this.receive(message.body_size, timeout);
+        const data = message.body_size > 0 ? await this.receive(message.body_size, timeout) : Buffer.alloc(0);
 
-        if (data && body_checksum !== adler32.sum(data)) {
+        if (data.length && body_checksum !== adler32.sum(data)) {
             throw new Error('Body checksum does not match');
         }
 
         // @ts-ignore
-        message.body = data;
+        if (message.body_size > 0) message.body = data;
 
         return message;
     }
@@ -218,7 +218,7 @@ export default class Session extends EventEmitter {
         }
 
         if (!Buffer.isBuffer(data)) {
-            data = Buffer.from(data, 'binary');
+            data = Buffer.from(data as string, 'binary');
         }
 
         if (this.encryption) {

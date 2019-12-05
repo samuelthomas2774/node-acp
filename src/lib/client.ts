@@ -4,6 +4,7 @@ import Message from './message';
 import Property, {PropType, FormattedValues, PropertyWithValue} from './property';
 import {PropName, PropTypes} from './properties';
 import PropertyValueTypes from './property-types';
+import {RPCData, RPCFunction, RPCInputs} from './rpc-types';
 import CFLBinaryPList from './cflbinary';
 import {LogLevel, loglevel} from '..';
 
@@ -19,11 +20,6 @@ interface PropSetResponse {
     flags: number;
     size: number;
     value: Buffer;
-}
-
-enum GetPropError {
-    NOT_AVAILABLE = -10, // 0xfffffff6
-    UNKNOWN = -6772, // 0xffffe58c - returned from raNm
 }
 
 export default class Client {
@@ -240,6 +236,13 @@ export default class Client {
         ]));
         const response = await this.send(request);
         return new Monitor(this, this.session, response);
+    }
+
+    async rpc<F extends RPCFunction>(fn: F, inputs: RPCData<F>['inputs'] = {} as any) {
+        const data: RPCData<F> = {function: fn, inputs};
+        const request = Message.composeRPCCommand(0, this.password, CFLBinaryPList.compose(data));
+        const response = await this.send(request);
+        return CFLBinaryPList.parse(response.body!);
     }
 
     /**
