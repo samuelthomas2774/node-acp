@@ -5,6 +5,7 @@
         "name": "Samuel Elliott"
     },
     "version": "0.5.0",
+    "license": "MIT",
     "homepage": "https://gitlab.fancy.org.uk/samuel/node-acp",
     "bugs": "https://gitlab.fancy.org.uk/samuel/node-acp/issues",
     "repository": {
