@@ -7,10 +7,11 @@ import {promises as fs} from 'fs';
  * Decodes ACPData.bin files used to store ACP properties.
  */
 export default class ACPData extends Map<PropName, Buffer> {
-    constructor() {
-        super();
-    }
-
+    /**
+     * Returns data in a readable format.
+     *
+     * @return {object}
+     */
     toJSON() {
         const data: {[N in PropName]?: FormattedValues[PropTypes[N]];} = {};
 
@@ -30,14 +31,32 @@ export default class ACPData extends Map<PropName, Buffer> {
 
     static load(file: string): Promise<ACPData>
     static load(data: Buffer): ACPData
+    /**
+     * Load ACPData.bin files.
+     *
+     * @param {Buffer|string} data ACPData.bin contents/filename
+     * @return {Promise<ACPData>|ACPData}
+     */
     static load(data: string | Buffer) {
         return data instanceof Buffer ? this.loadData(data) : this.loadFile(data);
     }
 
+    /**
+     * Load ACPData.bin data from a file.
+     *
+     * @param {string} file
+     * @return {Promise<ACPData>}
+     */
     private static async loadFile(file: string) {
         return this.loadData(await fs.readFile(file));
     }
 
+    /**
+     * Load ACPData.bin data from a Buffer.
+     *
+     * @param {Buffer} data
+     * @return {ACPData}
+     */
     private static loadData(data: Buffer) {
         const acpdata = new ACPData();
 

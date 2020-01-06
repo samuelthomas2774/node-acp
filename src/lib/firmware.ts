@@ -14,6 +14,12 @@ const keys: {
     120: Buffer.from('688cdd3b1b6bdda207b6cec2735292d2', 'hex'),
 };
 
+/**
+ * Get the firmware decryption key for an AirPort base station model.
+ *
+ * @param {number} model
+ * @return {Buffer}
+ */
 export function deriveKey(model: keyof typeof keys) {
     if (!keys[model]) throw new Error('Unknown model');
 
@@ -42,8 +48,18 @@ export interface HeaderData {
 export const HEADER_MAGIC = 'APPLE-FIRMWARE\x00';
 export const HEADER_SIZE = 32;
 
+/**
+ * Decrypts the firmware image from a firmware file.
+ *
+ * If a firmware file is passed in a Buffer, the decrypted firmware image will be returned in a Buffer.
+ * Otherwise, a transform stream will be returned.
+ *
+ * @param {Buffer} [data]
+ * @return {Buffer|stream.Transform}
+ */
 export function parse(data: Buffer): Buffer
 export function parse(): stream.Transform
+// eslint-disable-next-line require-jsdoc
 export function parse(data?: Buffer) {
     if (data instanceof Buffer) {
         if (data.length < HEADER_SIZE + 4) throw new Error('Not enough data to parse');
@@ -61,7 +77,8 @@ export function parse(data?: Buffer) {
         if (loglevel >= LogLevel.INFO) {
             console.debug('Stored checksum      %d %s', stored_checksum, stored_checksum.toString(16));
             console.debug('Calculared checksum  %d %s', checksum, checksum.toString(16));
-            console.debug('Length               %d %s', header_data.length + decrypted_data.length, (header_data.length + decrypted_data.length).toString(16));
+            console.debug('Length               %d %s', header_data.length + decrypted_data.length,
+                (header_data.length + decrypted_data.length).toString(16));
         }
         if (checksum !== stored_checksum) throw new Error('Bad checksum');
 
@@ -122,7 +139,8 @@ export function parse(data?: Buffer) {
                     if (loglevel >= LogLevel.INFO) {
                         console.debug('Stored checksum      %d %s', stored_checksum, stored_checksum.toString(16));
                         console.debug('Calculared checksum  %d %s', checksum, checksum.toString(16));
-                        console.debug('Length               %d %s', header_data.length + length, (header_data.length + length).toString(16));
+                        console.debug('Length               %d %s', header_data.length + length,
+                            (header_data.length + length).toString(16));
                     }
                     if (checksum !== stored_checksum) return callback(new Error('Bad checksum'));
                     callback();
@@ -132,6 +150,12 @@ export function parse(data?: Buffer) {
     }
 }
 
+/**
+ * Parse firmware file header data.
+ *
+ * @param {Buffer} data
+ * @return {object}
+ */
 export function parseHeader(data: Buffer): HeaderData {
     if (data.length !== HEADER_SIZE) throw new Error('Not enough data to parse');
 
@@ -152,6 +176,12 @@ export function parseHeader(data: Buffer): HeaderData {
     return {magic, byte_0x0f, model, version, byte_0x18, byte_0x19, byte_0x1a, flags, unknown_0x1c};
 }
 
+/**
+ * Compose firmware file header data.
+ *
+ * @param {object} data
+ * @return {Buffer}
+ */
 export function composeHeader(data: HeaderData) {
     if (data.magic !== HEADER_MAGIC) {
         throw new Error('data.magic must match HEADER_MAGIC');
@@ -172,8 +202,18 @@ export function composeHeader(data: HeaderData) {
     return buffer;
 }
 
+/**
+ * Decrypts the inner firmware image from a firmware file.
+ *
+ * If a firmware file is passed in a Buffer, the decrypted firmware image will be returned in a Buffer.
+ * Otherwise, a transform stream will be returned.
+ *
+ * @param {Buffer} [data]
+ * @return {Buffer|stream.Transform}
+ */
 export function decrypt(data: Buffer, model: number, byte_0x0f: number): Buffer
 export function decrypt(model: number, byte_0x0f: number): stream.Transform
+// eslint-disable-next-line require-jsdoc
 export function decrypt(...args: any) {
     const [model, byte_0x0f]: [number, number] = args[0] instanceof Buffer ? args.slice(1) : args;
 
@@ -229,6 +269,14 @@ export function decrypt(...args: any) {
     }
 }
 
+/**
+ * Decrypts a 32768 byte firmware file chunk.
+ *
+ * @param {Buffer} data
+ * @param {Buffer} key
+ * @param {Buffer} iv
+ * @return {Buffer}
+ */
 function decryptChunk(data: Buffer, key: Buffer, iv: Buffer) {
     const cipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
     cipher.setAutoPadding(false);
@@ -253,8 +301,18 @@ function decryptChunk(data: Buffer, key: Buffer, iv: Buffer) {
     return decrypted;
 }
 
+/**
+ * Decompresses the decrypted inner firmware image from a firmware file.
+ *
+ * If a firmware image is passed in a Buffer, the decompressed firmware image will be returned in a Buffer.
+ * Otherwise, a transform stream will be returned.
+ *
+ * @param {Buffer} [data]
+ * @return {Buffer|stream.Transform}
+ */
 export function extract(data: Buffer): Promise<Buffer>
 export function extract(): stream.Transform
+// eslint-disable-next-line require-jsdoc
 export function extract(data?: Buffer) {
     const header_bytes = Buffer.from('\x1f\x8b\x08', 'binary');
 

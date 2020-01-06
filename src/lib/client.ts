@@ -4,9 +4,10 @@ import Message from './message';
 import Property, {PropType, FormattedValues, PropertyWithValue} from './property';
 import {PropName, PropTypes} from './properties';
 import PropertyValueTypes from './property-types';
-import {RPCData, RPCFunction, RPCInputs} from './rpc-types';
+import {RPCFunction, RPCInputData, RPCOutputData} from './rpc-types';
 import CFLBinaryPList from './cflbinary';
 import {LogLevel, loglevel} from '..';
+import {InvalidResponseError} from './util';
 
 import crypto from 'crypto';
 import stream from 'stream';
@@ -21,6 +22,9 @@ interface PropSetResponse {
     value: Buffer;
 }
 
+/**
+ * ACP client.
+ */
 export default class Client {
     readonly host: string;
     readonly port: number;
@@ -64,18 +68,34 @@ export default class Client {
         return this.session.close();
     }
 
+    /** @type {boolean} */
     get connected() {
         return !!this.session.socket;
     }
 
+    /**
+     * `true` if session encryption is enabled.
+     *
+     * @type {boolean}
+     */
     get session_encrypted() {
-        return this.session.encryption;
+        return !!this.session.encryption;
     }
 
+    /**
+     * IP address and port of the client.
+     *
+     * @type {[string, number]}
+     */
     get local_address(): [string, number] {
         return [this.session.socket!.localAddress, this.session.socket!.localPort];
     }
 
+    /**
+     * IP address and port of the server.
+     *
+     * @type {[string, number]}
+     */
     get remote_address(): [string, number] {
         return [this.session.socket!.remoteAddress!, this.session.socket!.remotePort!];
     }
@@ -106,6 +126,7 @@ export default class Client {
      */
     async getProperties<N extends PropName, T extends PropType = PropTypes[N], V = N extends keyof PropertyValueTypes ? PropertyValueTypes[N] : FormattedValues[T]>(props: (Property<N, T, V> | N)[], include_errors: true): Promise<(PropertyWithValue<N, T, V> | Error)[]>
     async getProperties<N extends PropName, T extends PropType = PropTypes[N], V = N extends keyof PropertyValueTypes ? PropertyValueTypes[N] : FormattedValues[T]>(props: (Property<N, T, V> | N)[], include_errors?: false): Promise<PropertyWithValue<N, T, V>[]>
+    // eslint-disable-next-line require-jsdoc
     async getProperties<N extends PropName, T extends PropType = PropTypes[N], V = N extends keyof PropertyValueTypes ? PropertyValueTypes[N] : FormattedValues[T]>(props: (Property<N, T, V> | N)[], include_errors?: boolean) {
         return this.session.queue(async session => {
             let payload = '';
@@ -140,7 +161,8 @@ export default class Client {
 
                 if (flags & 1) {
                     const error_code = value.readInt32BE(0);
-                    const error = new Error(`Error requesting value for property "${name}": ${error_code} ${value.toString('hex')}`);
+                    const error = new Error(`Error requesting value for property "${name}": ${error_code} ` +
+                        value.toString('hex'));
                     if (include_errors) props_with_values.push(error);
                     else console.error((err = error).message);
                     continue;
@@ -163,6 +185,12 @@ export default class Client {
         });
     }
 
+    /**
+     * Gets a property from the AirPort device.
+     *
+     * @param {Property|string} property
+     * @return {Property}
+     */
     async getProperty<N extends PropName, T extends PropType = PropTypes[N], V = N extends keyof PropertyValueTypes ? PropertyValueTypes[N] : FormattedValues[T]>(property: Property<N, T, V> | N) {
         const [response]: (Property<N, T, V> | Error)[] = await this.getProperties([property], true);
         if (response instanceof Error) throw response;
@@ -206,7 +234,8 @@ export default class Client {
 
                 if (flags & 1) {
                     const error_code = value.readUInt32BE(0);
-                    throw new Error('Error setting value for property "' + name + '": ' + error_code + ' ' + value.toString('hex'));
+                    throw new Error('Error setting value for property "' + name + '": ' + error_code + ' ' +
+                        value.toString('hex'));
                 }
 
                 if (name as string === '\0\0\0\0') {
@@ -237,11 +266,27 @@ export default class Client {
         return new Monitor(this, this.session, response);
     }
 
-    async rpc<F extends RPCFunction>(fn: F, inputs: RPCData<F>['inputs'] = {} as any) {
-        const data: RPCData<F> = {function: fn, inputs};
+    /**
+     * Sends a RPC message.
+     *
+     * @param {string} fn
+     * @param {object} inputs
+     * @return {Promise<{status: number, outputs: object}>}
+     */
+    async rpc<F extends RPCFunction>(fn: F, inputs: RPCInputData<F>['inputs'] = {} as any) {
+        const data: RPCInputData<F> = {function: fn, inputs};
         const request = Message.composeRPCCommand(0, this.password, CFLBinaryPList.compose(data));
         const response = await this.send(request);
-        return CFLBinaryPList.parse(response.body!);
+        const resdata = CFLBinaryPList.parse(response.body!);
+
+        if (typeof resdata.status !== 'number') {
+            throw new InvalidResponseError('Response did not include a numeric status code', resdata);
+        }
+        if (typeof resdata.outputs !== 'object') {
+            throw new InvalidResponseError('Response did not include output data', resdata);
+        }
+
+        return resdata as RPCOutputData;
     }
 
     /**
@@ -258,6 +303,11 @@ export default class Client {
         });
     }
 
+    /**
+     * Gets the AirPort device's logs.
+     *
+     * @return {string}
+     */
     async getLogs() {
         const [prop] = await this.getProperties(['logm']);
         return prop.format();
@@ -280,6 +330,11 @@ export default class Client {
         });
     }
 
+    /**
+     * Authenticate to the ACP server and enable session encryption.
+     *
+     * @return {Promise}
+     */
     async authenticate() {
         return this.session.queue(async session => {
             if (this.session.encryption) {
@@ -296,6 +351,13 @@ export default class Client {
         });
     }
 
+    /**
+     * M1 (client)/M2 (server)
+     *
+     * @private
+     * @param {SessionLock} session
+     * @return {Promise}
+     */
     private async authenticateStageOne(session: SessionLock) {
         /**
          * Stage 1 (client)
@@ -332,6 +394,14 @@ export default class Client {
         return this.authenticateStageThree(session, data);
     }
 
+    /**
+     * M3 (client)/M4 (server)
+     *
+     * @private
+     * @param {SessionLock} session
+     * @param {object} data Data from stage 1/2
+     * @return {Promise}
+     */
     private async authenticateStageThree(session: SessionLock, data: {
         salt: Buffer;
         generator: Buffer;
@@ -413,6 +483,14 @@ export default class Client {
         return this.authenticateStageFive(srpc, iv, data_2);
     }
 
+    /**
+     * M5 (client)
+     *
+     * @private
+     * @param {srp.Client} srpc
+     * @param {Buffer} client_iv
+     * @param {object} data Data from stage 3/4
+     */
     private async authenticateStageFive(srpc: srp.Client, client_iv: Buffer, data: {
         response: Buffer;
         iv: Buffer;
@@ -445,7 +523,8 @@ export default class Client {
     }
 }
 
-type MonitorProp = 'logm' | 'ACPRemoteBonjour' | 'MaSt' | 'waCD' | 'waC1' | 'waRA' | 'daSt' | 'tACL' | 'dmSt' | 'waIP' | 'wsci' | 'sySt' | 'stat' | 'raCh' | 'waC2' | 'DynS' | 'prnR' | 'waSM' | 'iCld' | 'deSt';
+type MonitorProp = 'logm' | 'ACPRemoteBonjour' | 'MaSt' | 'waCD' | 'waC1' | 'waRA' | 'daSt' | 'tACL' | 'dmSt' |
+    'waIP' | 'wsci' | 'sySt' | 'stat' | 'raCh' | 'waC2' | 'DynS' | 'prnR' | 'waSM' | 'iCld' | 'deSt';
 
 interface MonitorRequestData {
     filters?: {
@@ -457,9 +536,20 @@ type MonitorData = {
     [K in MonitorProp]?: any;
 };
 
+/**
+ * ACP monitor session.
+ *
+ * @param {MonitorData} data
+ */
 export class Monitor extends stream.Readable {
     private readonly _socket: import('net').Socket;
 
+    /**
+     * @private
+     * @param {Client} client
+     * @param {Session} session
+     * @param {Message} response
+     */
     constructor(readonly client: Client, private readonly session: Session, private readonly response: Message) {
         super({
             read: size => {},
@@ -472,6 +562,11 @@ export class Monitor extends stream.Readable {
         this.session.on('disconnected', this._handleDisconnected);
     }
 
+    /**
+     * `true` if the monitor session is still active and receiving messages.
+     *
+     * @type {boolean}
+     */
     get active() {
         return this._socket === this.session.socket;
     }

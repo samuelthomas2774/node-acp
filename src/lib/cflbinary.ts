@@ -4,6 +4,9 @@ export const FOOTER_MAGIC = 'END!';
 export const HEADER_SIZE = HEADER_MAGIC.length;
 export const FOOTER_SIZE = FOOTER_MAGIC.length;
 
+/**
+ * Parse/compose CFL binary property lists.
+ */
 export default class CFLBinaryPList {
     /**
      * Compose JavaScript object into equivalent plist.
@@ -26,6 +29,9 @@ export default class CFLBinaryPList {
     }
 }
 
+/**
+ * Compose CFL binary property lists.
+ */
 export class CFLBinaryPListComposer {
     /**
      * Compose JavaScript object into equivalent plist.
@@ -169,6 +175,9 @@ export class CFLBinaryPListComposer {
     }
 }
 
+/**
+ * Parse CFL binary property lists.
+ */
 export class CFLBinaryPListParser {
     /**
      * Parse plist data into equivalent JavaScript built in.
@@ -191,7 +200,8 @@ export class CFLBinaryPListParser {
         const [object, remaining_data] = this.unpackObject(data.slice(HEADER_SIZE));
 
         if (remaining_data.length > FOOTER_SIZE) {
-            throw new Error('Extra data found after unpacking root object: expected ' + FOOTER_SIZE + ' but found ' + remaining_data.length + ' - ' + remaining_data.toString('hex'));
+            throw new Error('Extra data found after unpacking root object: expected ' + FOOTER_SIZE + ' but found ' +
+                remaining_data.length + ' - ' + remaining_data.toString('hex'));
         }
 
         if (remaining_data.toString('binary') !== FOOTER_MAGIC) {

@@ -10,6 +10,9 @@ import net from 'net';
 import crypto from 'crypto';
 import EventEmitter from 'events';
 
+/**
+ * Holds information about a connection to an ACP server/client.
+ */
 export default class Session extends EventEmitter {
     readonly host: string;
     readonly port: number;
@@ -101,6 +104,12 @@ export default class Session extends EventEmitter {
         }
     }
 
+    /**
+     * Handles unsolicited data.
+     *
+     * @param {Buffer} data
+     * @return {Promise}
+     */
     async handleData(data: Buffer) {
         // 58 45 00 95 00 00 00 6f + CFL binary plist
         // 58 45 00 95 is header magic?
@@ -115,6 +124,11 @@ export default class Session extends EventEmitter {
         this.buffer = Buffer.alloc(0);
     }
 
+    /**
+     * Handles monitor data.
+     *
+     * @param {Buffer} data
+     */
     async handleMonitorData() {
         const header = await this.receive(8);
         const magic = header.slice(0, 4).toString('binary');
@@ -322,10 +336,24 @@ export default class Session extends EventEmitter {
         });
     }
 
+    /**
+     * Enables encryption as an ACP client.
+     *
+     * @param {Buffer} key
+     * @param {Buffer} client_iv
+     * @param {Buffer} server_iv
+     */
     enableEncryption(key: Buffer, client_iv: Buffer, server_iv: Buffer) {
         this.encryption = new ClientEncryption(key, client_iv, server_iv);
     }
 
+    /**
+     * Enables encryption as an ACP server.
+     *
+     * @param {Buffer} key
+     * @param {Buffer} client_iv
+     * @param {Buffer} server_iv
+     */
     enableServerEncryption(key: Buffer, client_iv: Buffer, server_iv: Buffer) {
         this.encryption = new ServerEncryption(key, client_iv, server_iv);
     }
@@ -357,25 +385,48 @@ export default interface Session {
     listenerCount<E extends keyof Events>(type: E): number;
 } // eslint-disable-line semi
 
+/**
+ * Proxies exclusive temporary access to a session object.
+ */
 export class SessionLock {
+    /**
+     * @private
+     * @param {Session} session
+     */
     constructor(private session: Session | null) {}
 
+    /**
+     * @private
+     */
     invalidate() {
         this.session = null;
     }
 
+    /**
+     * `true` if session encryption is enabled.
+     */
     get encrypted() {
         if (!this.session) throw new Error('Lock is no longer valid');
 
-        return this.session.encryption;
+        return !!this.session.encryption;
     }
 
+    /**
+     * IP address and port of the client/server.
+     *
+     * @return {[string, number]}
+     */
     get local_address(): [string, number] {
         if (!this.session) throw new Error('Lock is no longer valid');
 
         return [this.session.socket!.localAddress, this.session.socket!.localPort];
     }
 
+    /**
+     * IP address and port of the server/client.
+     *
+     * @return {[string, number]}
+     */
     get remote_address(): [string, number] {
         if (!this.session) throw new Error('Lock is no longer valid');
 
@@ -445,7 +496,10 @@ interface EncryptionContext {
     decipher: crypto.Decipher;
 }
 
-class Encryption {
+/**
+ * Holds information about encryption for a session.
+ */
+export class Encryption {
     readonly key: Buffer;
     readonly client_iv: Buffer;
     readonly server_iv: Buffer;
@@ -456,6 +510,11 @@ class Encryption {
     readonly client_context: EncryptionContext;
     readonly server_context: EncryptionContext;
 
+    /**
+     * @param {Buffer} key
+     * @param {Buffer} client_iv
+     * @param {Buffer} server_iv
+     */
     constructor(key: Buffer, client_iv: Buffer, server_iv: Buffer) {
         this.key = key;
         this.client_iv = client_iv;
@@ -471,6 +530,11 @@ class Encryption {
         this.server_context = this.constructor.createEncryptionContext(derived_server_key, server_iv);
     }
 
+    /**
+     * @param {Buffer} key
+     * @param {Buffer} iv
+     * @return {object}
+     */
     static createEncryptionContext(key: Buffer, iv: Buffer) {
         return {
             cipher: crypto.createCipheriv('aes-128-ctr', key, iv),
@@ -478,47 +542,99 @@ class Encryption {
         };
     }
 
+    /**
+     * Encrypts data as an ACP client.
+     *
+     * @param {Buffer} data
+     * @return {Buffer}
+     */
     clientEncrypt(data: Buffer) {
         return this.client_context.cipher.update(data);
     }
 
+    /**
+     * Encrypts data as from ACP client.
+     *
+     * @param {Buffer} data
+     * @return {Buffer}
+     */
     clientDecrypt(data: Buffer) {
         return this.client_context.decipher.update(data);
     }
 
+    /**
+     * Encrypts data as an ACP server.
+     *
+     * @param {Buffer} data
+     * @return {Buffer}
+     */
     serverEncrypt(data: Buffer) {
         return this.server_context.cipher.update(data);
     }
 
+    /**
+     * Decrypts data from an ACP server.
+     *
+     * @param {Buffer} data
+     * @return {Buffer}
+     */
     serverDecrypt(data: Buffer) {
         return this.server_context.decipher.update(data);
     }
 }
 
-interface Encryption {
+export interface Encryption {
     constructor: typeof Encryption;
 }
-
-export {Encryption};
 
 const PBKDF_salt0 = Buffer.from('F072FA3F66B410A135FAE8E6D1D43D5F', 'hex');
 const PBKDF_salt1 = Buffer.from('BD0682C9FE79325BC73655F4174B996C', 'hex');
 
+/**
+ * Holds information about encryption for a session as an ACP client.
+ */
 export class ClientEncryption extends Encryption {
+    /**
+     * Encrypts data as an ACP client.
+     *
+     * @param {Buffer} data
+     * @return {Buffer}
+     */
     encrypt(data: Buffer) {
         return this.clientEncrypt(data);
     }
 
+    /**
+     * Encrypts data from an ACP server.
+     *
+     * @param {Buffer} data
+     * @return {Buffer}
+     */
     decrypt(data: Buffer) {
         return this.serverDecrypt(data);
     }
 }
 
+/**
+ * Holds information about encryption for a session as an ACP server.
+ */
 export class ServerEncryption extends Encryption {
+    /**
+     * Encrypts data as an ACP server.
+     *
+     * @param {Buffer} data
+     * @return {Buffer}
+     */
     encrypt(data: Buffer) {
         return this.serverEncrypt(data);
     }
 
+    /**
+     * Encrypts data from an ACP client.
+     *
+     * @param {Buffer} data
+     * @return {Buffer}
+     */
     decrypt(data: Buffer) {
         return this.clientDecrypt(data);
     }

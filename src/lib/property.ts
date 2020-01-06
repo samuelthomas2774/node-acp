@@ -24,6 +24,11 @@ interface HeaderData {
     size: number;
 }
 
+/**
+ * Generates the properties array used by the Property class from the array in ./properties.
+ *
+ * @return {PropData[]}
+ */
 export function generateACPProperties() {
     const props: PropData[] = [];
 
@@ -32,7 +37,9 @@ export function generateACPProperties() {
 
         if (name.length !== 4) throw new Error('Bad name in ACP properties list: ' + name);
 
-        if (!ValueInitialisers[type]) throw new Error('Bad type in ACP properties list for name: ' + name + ' - ' + type);
+        if (!ValueInitialisers[type]) {
+            throw new Error('Bad type in ACP properties list for name: ' + name + ' - ' + type);
+        }
 
         if (!description) throw new Error('Missing description in ACP properties list for name: ' + name);
 
@@ -299,7 +306,10 @@ export const ValueFormatters: {
 
 export const HEADER_SIZE = 12;
 
-class Property<
+/**
+ * Represents an ACP property.
+ */
+export default class Property<
     N extends PropName = any, T extends PropType = PropTypes[N],
     V = N extends keyof PropertyValueTypes ? PropertyValueTypes[N] : FormattedValues[T],
     Sv = N extends keyof PropertyValueTypes ? PropertyValueTypes[N] : SupportedValues[T]
@@ -315,6 +325,7 @@ class Property<
      */
     constructor(name?: N | '\0\0\0\0', value?: Buffer, force?: true)
     constructor(name?: N | '\0\0\0\0', value?: Buffer | string | Sv, force?: boolean)
+    // eslint-disable-next-line require-jsdoc
     constructor(name?: N | '\0\0\0\0', value?: Buffer | string | Sv, force = false) {
         if (name === '\x00\x00\x00\x00') {
             name = undefined;
@@ -328,7 +339,9 @@ class Property<
         if (value && !force) {
             const prop_type = this.constructor.getPropertyInfoString(name as N, 'type') as PropType;
 
-            if (!prop_type || !ValueInitialisers[prop_type]) throw new Error(`Missing handler for ${prop_type} property type`);
+            if (!prop_type || !ValueInitialisers[prop_type]) {
+                throw new Error(`Missing handler for ${prop_type} property type`);
+            }
 
             const v: Buffer = value = ValueInitialisers[prop_type](value as any);
 
@@ -357,6 +370,11 @@ class Property<
         return ValueFormatters[type](this.value);
     }
 
+    /**
+     * Returns the property's value in a readable format.
+     *
+     * @return {string}
+     */
     toString() {
         return JSON.stringify(this.format(), replacer);
     }
@@ -370,13 +388,27 @@ class Property<
         return props.map(prop => prop.name);
     }
 
+    /**
+     * Gets the property info object for this property.
+     */
     get info() {
         return props.find(p => p.name === this.name);
     }
 
-    static getPropertyInfoString<N extends PropName, T extends keyof PropData<N>>(propName: N, key: T): PropData<N>[T]
-    static getPropertyInfoString<T extends keyof PropData>(propName: PropName, key: T): PropData[T] | undefined
-    static getPropertyInfoString<N extends PropName, T extends keyof PropData<N>>(propName: N, key: T): PropData<N>[T] | undefined {
+    /**
+     * @deprecated
+     * @private
+     * @param {string} propName
+     * @param {string} key
+     */
+    private static getPropertyInfoString<N extends PropName, T extends keyof PropData<N>>(
+        propName: N, key: T
+    ): PropData<N>[T]
+    private static getPropertyInfoString<T extends keyof PropData>(propName: PropName, key: T): PropData[T] | undefined
+    // eslint-disable-next-line require-jsdoc
+    private static getPropertyInfoString<N extends PropName, T extends keyof PropData<N>>(
+        propName: N, key: T
+    ): PropData<N>[T] | undefined {
         if (!propName) return;
 
         const prop = props.find(p => p.name === propName) as PropData<N> | undefined;
@@ -435,11 +467,21 @@ class Property<
         }
     }
 
+    /**
+     * Packs an ACP property header.
+     *
+     * @param {string} name
+     * @param {number} flags
+     * @param {number} size
+     * @return {Buffer}
+     */
     static composeRawElementHeader(name: PropName, flags: number, size: number) {
         try {
             return this.packHeader({name, flags, size});
         } catch (err) {
-            if (loglevel >= LogLevel.WARNING) console.error('Error packing property %s, flags %d, size %d - :', name, flags, size, err);
+            if (loglevel >= LogLevel.WARNING) {
+                console.error('Error packing property %s, flags %d, size %d - :', name, flags, size, err);
+            }
             throw err;
         }
     }
@@ -482,11 +524,9 @@ class Property<
     }
 }
 
-interface Property<N extends PropName = any, T extends PropType = PropTypes[N]> {
+export default interface Property<N extends PropName = any, T extends PropType = PropTypes[N]> {
     constructor: typeof Property;
-}
-
-export default Property;
+} // eslint-disable-line semi
 
 export interface PropertyWithValue<
     N extends PropName = any, T extends PropType = PropTypes[N],

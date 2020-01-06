@@ -52,7 +52,11 @@ type BackToMyMacDomain = string;
 export interface DynS {
     /** Used to include the Back To My Mac domain, now empty */
     'State:/Network/PrivateDNS': string[];
-    /** Domains to use Multicast DNS for (local, 254.169.in-addr.arpa, 8.e.f.ip6.arpa, 9.e.f.ip6.arpa, a.e.f.ip6.arpa, b.e.f.ip6.arpa) */
+    /**
+     * Domains to use Multicast DNS for
+     *
+     * (local, 254.169.in-addr.arpa, 8.e.f.ip6.arpa, 9.e.f.ip6.arpa, a.e.f.ip6.arpa, b.e.f.ip6.arpa)
+     */
     'State:/Network/MulticastDNS': string[];
     'State:/Network/BackToMyMac': Record<BackToMyMacDomain, BackToMyMacAccount>;
 }
@@ -340,7 +344,11 @@ export interface WiFiRadioConfiguration {
     country: string;
     acEn: boolean;
     raWE: Buffer;
-    /** Transmit Power (10 - 10%, 25 - 25%, 50 - 50%, 100 - 100%) */
+    /**
+     * Transmit Power
+     *
+     * 10 - 10%, 25 - 25%, 50 - 50%, 100 - 100%
+     */
     raPo: number;
     /** Use wide channels */
     raWC: boolean;
@@ -394,7 +402,12 @@ export interface WiFiRadioConfiguration {
     wdFl: number;
     raDe: number;
     raWM: number;
-    /** Multicast rate (1 - 1 Mbps, 2 - 2 Mbps, 85 - 5.5 Mbps, 6 - 6 Mbps, 9 - 9 Mbps, 17 - 11 Mbps, 18 - 12 Mbps, 24 - 18 Mbps, 36 - 24 Mbps) */
+    /**
+     * Multicast rate
+     *
+     * 1 - 1 Mbps, 2 - 2 Mbps, 85 - 5.5 Mbps, 6 - 6 Mbps, 9 - 9 Mbps, 17 - 11 Mbps, 18 - 12 Mbps, 24 - 18 Mbps,
+     * 36 - 24 Mbps)
+     */
     raMu: number;
     /** RADIUS server #1 secret */
     raSe: string;
@@ -572,7 +585,12 @@ export interface Profile {
     dhSN: IPv4Address;
     '6Wte': IPv4Address;
     peAO: boolean;
-    /** PPPoE Disconnect if Idle (30 - 30 seconds, 60 - 1 minute, 120 - 2 minutes, 300 - 5 minutes, 600 - 10 minutes, 900 - 5 minutes, 1200 - 20 minutes, 1800 - 30 minutes, 0 - Never) */
+    /**
+     * PPPoE Disconnect if Idle
+     *
+     * 30 - 30 seconds, 60 - 1 minute, 120 - 2 minutes, 300 - 5 minutes, 600 - 10 minutes, 900 - 5 minutes,
+     * 1200 - 20 minutes, 1800 - 30 minutes, 0 - Never)
+     */
     peID: number;
     dh95: string;
     pmPR: IPv4Address;
@@ -583,7 +601,11 @@ export interface Profile {
     wbHU: string;
     /** Enable AOL Parental Controls */
     naAF: number;
-    /** Configure IPv4 (768 - Using DHCP, 1024 - Manually) */
+    /**
+     * Configure IPv4
+     *
+     * 768 - Using DHCP, 1024 - Manually
+     */
     waCV: number;
     /** Guest network DHCP lease time ?? */
     gnLe: number;
@@ -599,7 +621,11 @@ export interface Profile {
     naEn: IPv4Address;
     gnSN: IPv4Address;
     '6NS1': IPv6Address;
-    /** Status light (1 - Always On (default), 2 - Flash On Activity) */
+    /**
+     * Status light
+     *
+     * 1 - Always On (default), 2 - Flash On Activity
+     */
     leAc: number;
     usbF: number;
     raTr: number;

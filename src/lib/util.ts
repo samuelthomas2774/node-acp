@@ -22,11 +22,15 @@ export interface AdvertisementData {
     raCh: number;
     /** 5 GHz channel */
     rCh2: number;
-    /** Wireless network mode (0 - create a wireless network, 1 - join an existing wireless network, 3 - wireless disabled) */
+    /**
+     * Wireless network mode
+     *
+     * 0 - create a wireless network, 1 - join an existing wireless network, 3 - wireless disabled
+     */
     raSt: WirelessNetworkMode;
     /** Enable Network Address Translation */
     raNA: boolean;
-    /** Some hexidecimal flags - ?? */
+    /** Some hexadecimal flags - ?? */
     syFl: string; // '0x820C'
     /** Model */
     syAP: Model;
@@ -79,6 +83,12 @@ export function createAdvertisementData(data: AdvertisementData): Record<string,
     return result;
 }
 
+/**
+ * Get advertisement data from the merged _airport._tcp advertisement TXT records.
+ *
+ * @param {object} data
+ * @return {AdvertisementData}
+ */
 export function getAdvertisementData(data: Record<string, string>): AdvertisementData {
     const result = {} as AdvertisementData;
 
@@ -111,6 +121,13 @@ export function getAdvertisementData(data: Record<string, string>): Advertisemen
     return result;
 }
 
+/**
+ * JSON reviver function.
+ *
+ * @param {string} key
+ * @param {any} value
+ * @return {any}
+ */
 export function reviver(key: string, value: any) {
     if (typeof value === 'object' && value !== null) {
         const keys = Object.keys(value);
@@ -125,24 +142,41 @@ export function reviver(key: string, value: any) {
             error.stack = value.data.stack;
             return error;
         }
+        if (keys.length === 2 && keys.includes('type') && keys.includes('data') && value.type === 'UUID') return new UUID(value.data);
     }
 
     return value;
 }
 
+/**
+ * JSON replacer function.
+ *
+ * @param {string} key
+ * @param {any} value
+ * @return {any}
+ */
 export function replacer(key: string, value: any) {
     if (typeof value === 'bigint') return {type: 'bigint', data: value.toString()};
-    // @ts-ignore
-    if (value instanceof Error) return {type: 'Error', data: {message: value.message, code: value.code, stack: value.stack}};
+    if (value instanceof Error) {
+        // @ts-ignore
+        return {type: 'Error', data: {message: value.message, code: value.code, stack: value.stack}};
+    }
+    if (value instanceof UUID) return {type: 'UUID', data: value.toString()};
 
     return value;
 }
 
 const UUID_REGEX = /^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 
+/**
+ * UUID.
+ */
 export class UUID {
     readonly value: Buffer;
 
+    /**
+     * @param {Buffer|string} value A UUID as a 16 byte Buffer or string, or a hexadecimal string
+     */
     constructor(value: Buffer | string) {
         if (typeof value === 'string' && value.length === 16) {
             value = Buffer.from(value, 'binary');
@@ -158,14 +192,37 @@ export class UUID {
         this.value = value;
     }
 
+    /**
+     * Returns the UUID as a hexadecimal string.
+     *
+     * @return {string}
+     */
     toString() {
         return this.value.toString('hex')
             .replace(/^([0-9a-f]{8})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{12})$/, '$1-$2-$3-$4-$5');
     }
 
+    /**
+     * Returns the UUID as a Buffer.
+     *
+     * @return {Buffer}
+     */
     toBuffer() {
         const value = Buffer.alloc(16);
         this.value.copy(value);
         return value;
+    }
+}
+
+/**
+ * Error representing an invalid response received from the server.
+ */
+export class InvalidResponseError extends Error {
+    /**
+     * @param {string} message
+     * @param {object} response The original response data
+     */
+    constructor(message: string, readonly response: any) {
+        super(message);
     }
 }

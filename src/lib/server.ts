@@ -11,6 +11,11 @@ import net from 'net';
 import crypto from 'crypto';
 import * as srp from 'fast-srp-hap';
 
+/**
+ * Base ACP server.
+ *
+ * @abstract
+ */
 export default abstract class Server {
     readonly host: string;
     readonly port: number;
@@ -27,6 +32,10 @@ export default abstract class Server {
 
     private reading: number | null = null;
 
+    /**
+     * @param {string} host IP address to listen on
+     * @param {number} port Port number to listen on
+     */
     constructor(host: string, port: number) {
         this.host = host;
         this.port = port;
@@ -42,6 +51,7 @@ export default abstract class Server {
      */
     async addUser(username: string, password: string): Promise<void>;
     async addUser(username: string, verifier: Buffer, salt?: Buffer, params?: srp.SrpParams): Promise<void>;
+    // eslint-disable-next-line require-jsdoc
     async addUser(username: string, password: Buffer | string, salt?: Buffer, params?: srp.SrpParams) {
         if (username === 'admin') this.password = password instanceof Buffer ? password.toString() : password;
 
@@ -52,9 +62,20 @@ export default abstract class Server {
         const verifier = password instanceof Buffer ? password :
             srp.computeVerifier(params, salt, Buffer.from(username), Buffer.from(password));
 
-        this.users.set(username, {params, salt, verifier, password: typeof password === 'string' ? password : undefined});
+        this.users.set(username, {
+            params,
+            salt,
+            verifier,
+            password: typeof password === 'string' ? password : undefined,
+        });
     }
 
+    /**
+     * Starts listening for connections.
+     *
+     * @param {number} [timeout]
+     * @return {Promise}
+     */
     listen(timeout?: number) {
         return new Promise((resolve, reject) => {
             this.socket = new net.Server();
@@ -81,6 +102,11 @@ export default abstract class Server {
         });
     }
 
+    /**
+     * Stops listening for connection.
+     *
+     * @return {Promise}
+     */
     close() {
         if (!this.socket) return;
 
@@ -91,6 +117,12 @@ export default abstract class Server {
         });
     }
 
+    /**
+     * Handles connections from ACP clients.
+     *
+     * @param {net.Socket} socket
+     * @return {Session}
+     */
     handleConnection(socket: net.Socket) {
         const session = new Session(socket.remoteAddress!, socket.remotePort!, this.password!);
         session.socket = socket;
@@ -98,7 +130,9 @@ export default abstract class Server {
         if (loglevel >= LogLevel.INFO) console.log('New connection from', session.host, session.port);
 
         socket.on('data', data => {
-            if (loglevel >= LogLevel.DEBUG) console.debug(0, 'Receiving data', data, 'on connection', session.host + ' port ' + session.port);
+            if (loglevel >= LogLevel.DEBUG) {
+                console.debug(0, 'Receiving data', data, 'on connection', session.host + ' port ' + session.port);
+            }
 
             session.emit('raw-data', data);
 
@@ -126,6 +160,11 @@ export default abstract class Server {
 
     private _handlingData = false;
 
+    /**
+     * Handles new data from ACP clients.
+     *
+     * @param {Session} session
+     */
     async handleData(session: Session) {
         if (this._handlingData) return;
         this._handlingData = true;
@@ -137,6 +176,11 @@ export default abstract class Server {
         this._handlingData = false;
     }
 
+    /**
+     * Handles new messages from ACP clients.
+     *
+     * @param {Session} session
+     */
     async tryHandleMessage(session: Session) {
         try {
             const buffer = session.buffer;
@@ -163,11 +207,20 @@ export default abstract class Server {
 
             await this.handleMessage(session, message);
         } catch (err) {
-            if (loglevel >= LogLevel.WARNING) console.error('Error handling message from', session.host, session.port, err);
+            if (loglevel >= LogLevel.WARNING) {
+                console.error('Error handling message from', session.host, session.port, err);
+            }
             session.buffer = Buffer.alloc(0);
         }
     }
 
+    /**
+     * Handles messages from ACP clients.
+     *
+     * @param {Session} session
+     * @param {Message} message
+     * @return {Promise}
+     */
     async handleMessage(session: Session, message: Message) {
         console.log('Received message', message);
 
@@ -186,6 +239,12 @@ export default abstract class Server {
         if (loglevel >= LogLevel.INFO) console.error('Unknown command', message.command, message);
     }
 
+    /**
+     * Handles authenticate messages from ACP clients.
+     *
+     * @param {Session} session
+     * @param {Message} message
+     */
     private async handleAuthenticateMessage(session: Session & {
         authenticating_user?: string;
         srp?: srp.Server;
@@ -236,7 +295,8 @@ export default abstract class Server {
                 if (loglevel >= LogLevel.INFO) console.error('Error checking password', err.message);
                 session.authenticating_user = undefined;
                 session.srp = undefined;
-                const response = new Message(0x00030001, /* flags */ 5, 0, MessageType.AUTHENTICATE, ErrorCode.INCORRECT_PASSWORD, generateACPHeaderKey(''), Buffer.alloc(0));
+                const response = new Message(0x00030001, /* flags */ 5, 0, MessageType.AUTHENTICATE,
+                    ErrorCode.INCORRECT_PASSWORD, generateACPHeaderKey(''), Buffer.alloc(0));
                 await session.send(response);
                 return;
             }
@@ -264,6 +324,12 @@ export default abstract class Server {
         }
     }
 
+    /**
+     * Handles get property messages from ACP clients.
+     *
+     * @param {Session} session
+     * @param {Message} message
+     */
     private async handleGetPropertyMessage(session: Session, message: Message) {
         if (loglevel >= LogLevel.INFO) console.log('Received get prop command');
 
@@ -274,14 +340,16 @@ export default abstract class Server {
         while (data.length) {
             const prop_header = Buffer.concat([
                 data.slice(0, ELEMENT_HEADER_SIZE),
-                data.length < ELEMENT_HEADER_SIZE ? await session.receive(ELEMENT_HEADER_SIZE - data.length) : Buffer.alloc(0),
+                data.length < ELEMENT_HEADER_SIZE ?
+                    await session.receive(ELEMENT_HEADER_SIZE - data.length) : Buffer.alloc(0),
             ]);
             const prop_data = Property.unpackHeader(prop_header);
             const {name, size} = prop_data;
 
             const value = data.slice(ELEMENT_HEADER_SIZE, size); Buffer.concat([
                 data.slice(ELEMENT_HEADER_SIZE, size),
-                data.length < ELEMENT_HEADER_SIZE + size ? await session.receive((ELEMENT_HEADER_SIZE + size) - data.length) : Buffer.alloc(0),
+                data.length < ELEMENT_HEADER_SIZE + size ?
+                    await session.receive((ELEMENT_HEADER_SIZE + size) - data.length) : Buffer.alloc(0),
             ]);
             data = data.slice(Math.min(ELEMENT_HEADER_SIZE + size, data.length));
 
@@ -307,7 +375,8 @@ export default abstract class Server {
             response = Buffer.concat([
                 response,
                 prop instanceof Property ? Property.composeRawElement(0x00000000, prop) :
-                    Property.composeRawElement(0x00000001, new Property(props[i].name, this.getErrorCodeBuffer(prop), true)),
+                    Property.composeRawElement(0x00000001,
+                        new Property(props[i].name, this.getErrorCodeBuffer(prop), true)),
             ]);
             i++;
         }
@@ -321,16 +390,36 @@ export default abstract class Server {
         await session.send(rm);
     }
 
+    /**
+     * Gets an error code as a Buffer for an Error.
+     *
+     * @private
+     * @param {Error} error
+     * @return {Buffer}
+     */
     private getErrorCodeBuffer(error: Error) {
         const buffer = Buffer.alloc(4);
         buffer.writeInt32BE(this.getErrorCode(error), 0);
         return buffer;
     }
 
+    /**
+     * Gets an error code for an Error.
+     *
+     * @private
+     * @param {Error} error
+     * @return {number}
+     */
     private getErrorCode(error: Error) {
         return -10;
     }
 
+    /**
+     * Gets properties.
+     *
+     * @param {Property[]} props
+     * @return {(Property|Error)[]}
+     */
     getProperties(props: Property[]): Promise<(Property | Error)[]> {
         return Promise.all(props.map(async (prop: Property) => {
             try {
@@ -343,8 +432,23 @@ export default abstract class Server {
         }));
     }
 
-    abstract getProperty<N extends PropName, T extends PropType = PropTypes[N]>(prop: Property<N>): Property | Buffer | string | Promise<Property | Buffer | string>
+    /**
+     * Gets a property.
+     *
+     * @abstract
+     * @param {Property} prop
+     * @return {Property}
+     */
+    abstract getProperty<N extends PropName, T extends PropType = PropTypes[N]>(
+        prop: Property<N>
+    ): Property | Buffer | string | Promise<Property | Buffer | string>
 
+    /**
+     * Gets properties.
+     *
+     * @param {Property[]} props
+     * @return {(Property|Error)[]}
+     */
     setProperties(props: Property[]): Promise<(Property | Error)[]> {
         return Promise.all(props.map(async (prop: Property) => {
             try {
@@ -358,9 +462,30 @@ export default abstract class Server {
         }));
     }
 
+    /**
+     * Sets a property.
+     *
+     * @abstract
+     * @param {Property} prop
+     * @return {Property}
+     */
     abstract setProperty<N extends PropName, T extends PropType = PropTypes[N]>(prop: Property<N>): void | Promise<void>
 
+    /**
+     * Handles monitor messages.
+     *
+     * @abstract
+     * @param {Session} session
+     * @param {Message} message
+     */
     abstract handleMonitorMessage(session: Session, message: Message): void | Promise<void>
 
+    /**
+     * Handles RPC messages.
+     *
+     * @abstract
+     * @param {Session} session
+     * @param {Message} message
+     */
     abstract handleRPCMessage(session: Session, message: Message): void | Promise<void>
 }

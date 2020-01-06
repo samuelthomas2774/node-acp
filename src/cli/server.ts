@@ -1,19 +1,35 @@
 import {Server, Session, Message, CFLBinaryPList, Property} from '..';
-import {MessageType} from '../lib/message';
 import {replacer} from '../lib/util';
 import {syLR} from '../lib/property-types';
-import {RPCData} from '../lib/rpc-types';
 import {LocalStorage} from 'node-persist';
 
 const SYLR_REGIONS: syLR = require('../../resources/region-data');
 
+/**
+ * Test ACP server implementation that saves properties to a node-persist instance.
+ */
 export default class TestServer extends Server {
-    constructor(readonly host: string, readonly port: number, readonly password: string, readonly storage: LocalStorage) {
+    /**
+     * @param {string} host IP address to listen on
+     * @param {number} port Port to listen on
+     * @param {string} password Admin password
+     * @param {persist.LocalStorage} storage node-persist instance to save data to
+     */
+    constructor(
+        readonly host: string, readonly port: number, readonly password: string, readonly storage: LocalStorage
+    ) {
         super(host, port);
 
         this.addUser('admin', password);
     }
 
+    /**
+     * Handles a message.
+     *
+     * @param {Session} session
+     * @param {Message} message
+     * @return {Promise}
+     */
     async handleMessage(session: Session, message: Message) {
         // @ts-ignore
         global.session = session;
@@ -21,6 +37,12 @@ export default class TestServer extends Server {
         return super.handleMessage(session, message);
     }
 
+    /**
+     * Handles a monitor message.
+     *
+     * @param {Session} session
+     * @param {Message} message
+     */
     async handleMonitorMessage(session: Session, message: Message) {
         const [null_data, body] = [message.body!.slice(0, 4), message.body!.slice(4)];
 
@@ -37,6 +59,12 @@ export default class TestServer extends Server {
         await session.send(res);
     }
 
+    /**
+     * Handles an RPC message.
+     *
+     * @param {Session} session
+     * @param {Message} message
+     */
     async handleRPCMessage(session: Session, message: Message) {
         try {
             const data: RPCData = CFLBinaryPList.parse(message.body!);
@@ -53,6 +81,12 @@ export default class TestServer extends Server {
     properties: {[name: string]: Buffer | Error} = {};
     modified = false;
 
+    /**
+     * Gets properties.
+     *
+     * @param {Property[]} props
+     * @return {Property[]}
+     */
     async getProperties(props: Property[]) {
         const ret = await super.getProperties(props);
         if (this.modified) {
@@ -62,6 +96,12 @@ export default class TestServer extends Server {
         return ret;
     }
 
+    /**
+     * Gets a property.
+     *
+     * @param {Property} prop
+     * @return {Property|Buffer}
+     */
     async getProperty(prop: Property) {
         if (prop.name === 'syLR') return new Property('syLR', SYLR_REGIONS);
 
@@ -72,6 +112,12 @@ export default class TestServer extends Server {
         throw this.properties[prop.name] = new Error('Unknown property');
     }
 
+    /**
+     * Sets properties.
+     *
+     * @param {Property[]} props
+     * @return {Property[]}
+     */
     async setProperties(props: Property[]) {
         const ret = await super.setProperties(props);
         if (this.modified) {
@@ -82,6 +128,11 @@ export default class TestServer extends Server {
         return ret;
     }
 
+    /**
+     * Sets a property.
+     *
+     * @param {Property} prop
+     */
     async setProperty(prop: Property) {
         this.properties[prop.name] = prop.format();
         this.modified = true;

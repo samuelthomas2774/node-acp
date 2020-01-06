@@ -1,8 +1,13 @@
 import * as PropertyTypes from './property-types';
 
-export interface RPCData<F extends RPCFunction = RPCFunction> {
+export interface RPCInputData<F extends RPCFunction = RPCFunction> {
     inputs: F extends keyof RPCInputs ? RPCInputs[F] : {[key: string]: any;};
     function: F;
+}
+
+export interface RPCOutputData<F extends RPCFunction = RPCFunction> {
+    outputs: F extends keyof RPCOutputs ? RPCOutputs[F] : {[key: string]: any;};
+    status: RPCStatusCode<F>;
 }
 
 export enum RPCFunction {
@@ -170,4 +175,15 @@ export type RPCOutputs = {
         // apple-minvar, apple-sku, apple-sn, ethaddr, radio-cal-ath0, radio-cal-ath1
         variables: Record<string, string>;
     };
+};
+
+export type RPCStatusCode<F extends RPCFunction> =
+    F extends keyof RPCStatusCodes ? RPCStatusCodes[F] : RPCStatus;
+
+export enum RPCStatus {
+    OK = 0,
+}
+
+export type RPCStatusCodes = {
+    //
 };

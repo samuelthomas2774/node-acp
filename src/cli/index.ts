@@ -22,7 +22,8 @@ yargs.option('host', {
     describe: 'The hostname/IP address of the AirPort base station to connect to',
 });
 yargs.option('port', {
-    describe: 'The port of the AirPort base station\'s acp daemon (you should only need to change this when you need to use port forwarding to access the device)',
+    describe: 'The port of the AirPort base station\'s acp daemon (you should only need to change this when you ' +
+        'need to use port forwarding to access the device)',
     default: 5009,
 });
 yargs.option('password', {
@@ -94,7 +95,8 @@ yargs.command('server', 'Start the ACP server', yargs => {
             name: argv['advertise-name'],
             txtRecord: createAdvertisementData({
                 waMA: '00-00-00-00-00-00', // Ethernet MAC address
-                raMA: argv['advertise-address'], // 5 GHz Wi-Fi MAC address - this is used to identify devices in AirPort Utility
+                // 5 GHz Wi-Fi MAC address - this is used to identify devices in AirPort Utility
+                raMA: argv['advertise-address'],
                 raM2: '00-00-00-00-00-00', // 2.4 GHz Wi-Fi MAC address
                 raNm: argv['advertise-network'], // Network
                 raCh: 1, // 2.4 GHz channel
@@ -119,7 +121,9 @@ interface ClientCommandArguments extends GlobalArguments {
     encryption?: boolean;
 }
 
-const commandHandler = <A extends ClientCommandArguments = ClientCommandArguments>(handler: (client: Client, argv: A) => Monitor | undefined | void | Promise<Monitor | undefined | void>) => async (argv: A) => {
+type CommandHandler<A> = (client: Client, argv: A) => Monitor | undefined | void | Promise<Monitor | undefined | void>;
+// eslint-disable-next-line max-len
+const commandHandler = <A extends ClientCommandArguments = ClientCommandArguments>(handler: CommandHandler<A>) => async (argv: A) => {
     let password = argv.password;
 
     if (!password) {
@@ -318,6 +322,12 @@ yargs.command('pokeprop <prop> [type]', 'Attempt to get an ACP property and gues
     }
 }));
 
+/**
+ * Attempts to guess a property's type from it's value.
+ *
+ * @param {Property} prop
+ * @param {boolean} [json=false] Output JSON
+ */
 async function guessPropertyType(prop: Property, json = false) {
     if (prop.value!.length >= cfb.HEADER_SIZE + cfb.FOOTER_SIZE + 1 &&
         prop.value!.slice(0, cfb.HEADER_MAGIC.length).toString('binary') === cfb.HEADER_MAGIC &&
