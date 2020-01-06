@@ -47,17 +47,17 @@
     },
     "devDependencies": {
         "@types/mdns": "0.0.33",
-        "@types/node": "^12.12.7",
+        "@types/node": "^12.12.24",
         "@types/node-persist": "^3.0.0",
         "@types/pump": "^1.1.0",
         "@types/qunit": "^2.9.0",
         "@types/read": "0.0.28",
-        "@types/yargs": "^13.0.3",
-        "@typescript-eslint/parser": "^2.7.0",
+        "@types/yargs": "^13.0.4",
+        "@typescript-eslint/parser": "^2.14.0",
         "eslint": "^4.19.1",
         "eslint-config-google": "^0.9.1",
         "mdns": "^2.5.1",
         "qunit": "^2.9.3",
-        "typescript": "^3.7.2"
+        "typescript": "^3.7.4"
     }
 }
