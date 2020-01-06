@@ -1,7 +1,7 @@
 import {Server, Session, Message, CFLBinaryPList, Property} from '..';
 import {replacer} from '../lib/util';
-import {syLR} from '../lib/property-types';
-import {RPCInputData, RPCOutputData} from '../lib/rpc-types';
+import {syLR} from '../types/properties';
+import {RPCInputData, RPCOutputData} from '../types/rpc';
 import {LocalStorage} from 'node-persist';
 
 const SYLR_REGIONS: syLR = require('../../resources/region-data');

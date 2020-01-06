@@ -1,7 +1,7 @@
 
 import CFLBinaryPList from './cflbinary';
 import acp_properties, {PropName, PropTypes} from './properties';
-import PropertyValueTypes from './property-types';
+import PropertyValueTypes from '../types/properties';
 import {UUID, replacer} from './util';
 import {LogLevel, loglevel} from '..';
 

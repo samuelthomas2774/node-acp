@@ -3,7 +3,7 @@ import Session from './session';
 import Message, {HEADER_SIZE as MESSAGE_HEADER_SIZE, MessageType, ErrorCode, generateACPHeaderKey} from './message';
 import Property, {HEADER_SIZE as ELEMENT_HEADER_SIZE, SupportedValues, PropType} from './property';
 import {PropName, PropTypes} from './properties';
-import PropertyValueTypes, {StatusCode} from './property-types';
+import PropertyValueTypes, {StatusCode} from '../types/properties';
 import CFLBinaryPList from './cflbinary';
 import {LogLevel, loglevel} from '..';
 

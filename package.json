@@ -24,6 +24,7 @@
         "dist/index.js",
         "dist/index.d.ts",
         "dist/lib",
+        "dist/types",
         "dist/cli",
         "bin",
         "resources"

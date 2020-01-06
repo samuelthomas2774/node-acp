@@ -8,8 +8,8 @@ export {PropName, PropTypes} from './lib/properties';
 export {default as CFLBinaryPList} from './lib/cflbinary';
 import * as Firmware from './lib/firmware';
 import * as Util from './lib/util';
-import * as PropertyValueTypes from './lib/property-types';
-export {RPCInputData, RPCOutputData, RPCFunction, RPCInputs, RPCOutputs} from './lib/rpc-types';
+import * as PropertyValueTypes from './types/properties';
+export {RPCInputData, RPCOutputData, RPCFunction, RPCInputs, RPCOutputs} from './types/rpc';
 export {Firmware, Util, PropertyValueTypes};
 
 export enum LogLevel {

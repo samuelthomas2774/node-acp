@@ -2,7 +2,7 @@
 /** A MAC address, formatted as 00-00-00-00-00 */
 type MACAddress = string;
 
-import {WirelessNetworkMode} from './property-types';
+import {WirelessNetworkMode} from '../types/properties';
 
 enum Model {
     AIRPORT_EXPRESS_2ND_GENERATION = 115,

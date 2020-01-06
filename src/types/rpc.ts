@@ -1,4 +1,4 @@
-import * as PropertyTypes from './property-types';
+import * as PropertyTypes from './properties';
 
 export interface RPCInputData<F extends RPCFunction = RPCFunction> {
     inputs: F extends keyof RPCInputs ? RPCInputs[F] : {[key: string]: any;};
