@@ -68,6 +68,16 @@ firmware-test:
         - npm install
         - PATH=`pwd`/bin:$PATH scripts/test-firmware-115-7.8.1.sh
         - PATH=`pwd`/bin:$PATH scripts/test-firmware-120-7.9.1.sh
+    only:
+        changes:
+            - .gitlab-ci.yml
+            - package-lock.json
+            - tsconfig.json
+            - src/lib/firmware.ts
+            - src/cli/firmware.ts
+    except:
+        variables:
+            - $NPM_AUDIT_SCHEDULE_SKIP_BUILD
     dependencies:
         - build
     cache:
