@@ -1,6 +1,7 @@
 import {Server, Session, Message, CFLBinaryPList, Property} from '..';
 import {replacer} from '../lib/util';
 import {syLR} from '../lib/property-types';
+import {RPCInputData, RPCOutputData} from '../lib/rpc-types';
 import {LocalStorage} from 'node-persist';
 
 const SYLR_REGIONS: syLR = require('../../resources/region-data');
@@ -67,14 +68,16 @@ export default class TestServer extends Server {
      */
     async handleRPCMessage(session: Session, message: Message) {
         try {
-            const data: RPCData = CFLBinaryPList.parse(message.body!);
+            const data: RPCInputData = CFLBinaryPList.parse(message.body!);
 
             console.log('RPC data', data, JSON.stringify(data, replacer));
         } catch (err) {
             console.log('RPC data parse error', err);
         }
 
-        const res = Message.composeRPCCommand(0, '', CFLBinaryPList.compose({outputs: {}, status: 0}));
+        const resdata: RPCOutputData = {outputs: {}, status: 0};
+
+        const res = Message.composeRPCCommand(0, '', CFLBinaryPList.compose(resdata));
         await session.send(res);
     }
 
