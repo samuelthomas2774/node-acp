@@ -161,8 +161,80 @@ export type RPCInputs = {
     };
 };
 
+export interface BaseNetworkInterface {
+    'IP Addresses'?: string[];
+    parent?: NetworkInterface;
+    name: string; // pppoe0, bridge0
+    interfaces?: NetworkInterface[];
+    MAC: string; // Uppercase colon separated MAC address
+    type: string; // PPPoE, Ethernet
+}
+export interface PPPoENetworkInterface extends BaseNetworkInterface {
+    type: 'PPPoE';
+}
+export interface EthernetNetworkInterface extends BaseNetworkInterface {
+    Cache?: {
+        interface: string;
+        expiry: number;
+        MAC: string;
+    }[];
+    SwitchCache?: {
+        [index: string]: string[];
+    };
+    type: 'Ethernet';
+}
+export interface VLANNetworkInterface extends BaseNetworkInterface {
+    Cache: {
+        interface: string;
+        expiry: number;
+        MAC: string;
+    }[];
+    SwitchCache: {
+        [index: string]: string[];
+    };
+    type: 'VLAN';
+}
+export interface HardwareWiFiNetworkInterface extends BaseNetworkInterface {
+    type: '802.11 Radio';
+}
+export interface WiFiNetworkInterface extends BaseNetworkInterface {
+    Cache?: {
+        interface: string;
+        expiry: number;
+        MAC: string;
+    }[];
+    Channel: string;
+    clients: {
+        PHY: string;
+        HT: string;
+        MAC: string;
+    };
+    BSSID: string;
+    SSID: string;
+    PHY: string;
+    opmode: 'AP';
+    type: '802.11 VAP';
+}
+export interface BridgeNetworkInterface extends BaseNetworkInterface {
+    type: 'Bridge';
+}
+export interface NetworkInterfaces {
+    PPPoE: PPPoENetworkInterface;
+    Ethernet: EthernetNetworkInterface;
+    VLAN: VLANNetworkInterface;
+    '802.11 Radio': HardwareWiFiNetworkInterface;
+    '802.11 VAP': WiFiNetworkInterface;
+    Bridge: BridgeNetworkInterface;
+}
+export type NetworkInterface = NetworkInterfaces[keyof NetworkInterfaces];
+
 export type RPCOutputs = {
-    [RPCFunction.GET_INTERFACES]: {};
+    [RPCFunction.GET_INTERFACES]: {
+        WAN?: NetworkInterface; // PPPoENetworkInterface
+        Guest?: NetworkInterface; // BridgeNetworkInterface
+        config: 'DHCP/NAT via PPPoE' | 'Bridged';
+        LAN: NetworkInterface; // BridgeNetworkInterface
+    };
 
     [RPCFunction.GET_RPC_FUNCTIONS]: {
         output: string;
