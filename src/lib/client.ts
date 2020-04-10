@@ -526,7 +526,8 @@ export default class Client {
 }
 
 type MonitorProp = 'logm' | 'ACPRemoteBonjour' | 'MaSt' | 'waCD' | 'waC1' | 'waRA' | 'daSt' | 'tACL' | 'dmSt' |
-    'waIP' | 'wsci' | 'sySt' | 'stat' | 'raCh' | 'waC2' | 'DynS' | 'prnR' | 'waSM' | 'iCld' | 'deSt';
+    'waIP' | 'wsci' | 'sySt' | 'stat' | 'raCh' | 'waC2' | 'DynS' | 'prnR' | 'waSM' | 'iCld' | 'deSt' |
+    'raSL';
 
 interface MonitorRequestData {
     filters?: {
