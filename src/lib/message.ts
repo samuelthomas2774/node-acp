@@ -119,6 +119,10 @@ export default class Message {
 
         this.key = key instanceof Buffer ? key : Buffer.from(key, 'binary');
         this.body = body;
+
+        if (this.key.length !== 32) {
+            throw new Error('key must be a 32-byte Buffer or string');
+        }
     }
 
     /**
@@ -283,50 +287,57 @@ export default class Message {
     }
 
     // eslint-disable-next-line require-jsdoc
-    static composeEchoCommand(flags: number, password: string, payload?: Buffer | string) {
-        return new Message(0x00030001, flags, 0, MessageType.ECHO, 0, generateACPHeaderKey(password), payload);
+    static composeEchoCommand(flags: number, password: string | null, payload?: Buffer | string) {
+        const key = password ? generateACPHeaderKey(password) : Buffer.alloc(32);
+        return new Message(0x00030001, flags, 0, MessageType.ECHO, 0, key, payload);
     }
 
     // eslint-disable-next-line require-jsdoc
-    static composeFlashPrimaryCommand(flags: number, password: string, payload?: Buffer | string) {
-        return new Message(0x00030001, flags, 0, MessageType.FLASH_PRIMARY, 0, generateACPHeaderKey(password), payload);
+    static composeFlashPrimaryCommand(flags: number, password: string | null, payload?: Buffer | string) {
+        const key = password ? generateACPHeaderKey(password) : Buffer.alloc(32);
+        return new Message(0x00030001, flags, 0, MessageType.FLASH_PRIMARY, 0, key, payload);
     }
 
     // eslint-disable-next-line require-jsdoc
-    static composeFlashSecondaryCommand(flags: number, password: string, payload?: Buffer | string) {
-        return new Message(0x00030001, flags, 0, MessageType.FLASH_SECONDARY, 0, generateACPHeaderKey(password),
-            payload);
+    static composeFlashSecondaryCommand(flags: number, password: string | null, payload?: Buffer | string) {
+        const key = password ? generateACPHeaderKey(password) : Buffer.alloc(32);
+        return new Message(0x00030001, flags, 0, MessageType.FLASH_SECONDARY, 0, key, payload);
     }
 
     // eslint-disable-next-line require-jsdoc
-    static composeFlashBootloaderCommand(flags: number, password: string, payload?: Buffer | string) {
-        return new Message(0x00030001, flags, 0, MessageType.FLASH_BOOTLOADER, 0, generateACPHeaderKey(password),
-            payload);
+    static composeFlashBootloaderCommand(flags: number, password: string | null, payload?: Buffer | string) {
+        const key = password ? generateACPHeaderKey(password) : Buffer.alloc(32);
+        return new Message(0x00030001, flags, 0, MessageType.FLASH_BOOTLOADER, 0, key, payload);
     }
 
     // eslint-disable-next-line require-jsdoc
-    static composeGetPropCommand(flags: number, password: string, payload?: Buffer | string) {
-        return new Message(0x00030001, flags, 0, MessageType.GET_PROPERTY, 0, generateACPHeaderKey(password), payload);
+    static composeGetPropCommand(flags: number, password: string | null, payload?: Buffer | string) {
+        const key = password ? generateACPHeaderKey(password) : Buffer.alloc(32);
+        return new Message(0x00030001, flags, 0, MessageType.GET_PROPERTY, 0, key, payload);
     }
 
     // eslint-disable-next-line require-jsdoc
-    static composeSetPropCommand(flags: number, password: string, payload?: Buffer | string) {
-        return new Message(0x00030001, flags, 0, MessageType.SET_PROPERTY, 0, generateACPHeaderKey(password), payload);
+    static composeSetPropCommand(flags: number, password: string | null, payload?: Buffer | string) {
+        const key = password ? generateACPHeaderKey(password) : Buffer.alloc(32);
+        return new Message(0x00030001, flags, 0, MessageType.SET_PROPERTY, 0, key, payload);
     }
 
     // eslint-disable-next-line require-jsdoc
-    static composePerformCommand(flags: number, password: string, payload?: Buffer | string) {
-        return new Message(0x00030001, flags, 0, MessageType.PERFORM, 0, generateACPHeaderKey(password), payload);
+    static composePerformCommand(flags: number, password: string | null, payload?: Buffer | string) {
+        const key = password ? generateACPHeaderKey(password) : Buffer.alloc(32);
+        return new Message(0x00030001, flags, 0, MessageType.PERFORM, 0, key, payload);
     }
 
     // eslint-disable-next-line require-jsdoc
-    static composeMonitorCommand(flags: number, password: string, payload?: Buffer | string) {
-        return new Message(0x00030001, flags, 0, MessageType.MONITOR, 0, generateACPHeaderKey(password), payload);
+    static composeMonitorCommand(flags: number, password: string | null, payload?: Buffer | string) {
+        const key = password ? generateACPHeaderKey(password) : Buffer.alloc(32);
+        return new Message(0x00030001, flags, 0, MessageType.MONITOR, 0, key, payload);
     }
 
     // eslint-disable-next-line require-jsdoc
-    static composeRPCCommand(flags: number, password: string, payload?: Buffer | string) {
-        return new Message(0x00030001, flags, 0, MessageType.RPC, 0, generateACPHeaderKey(password), payload);
+    static composeRPCCommand(flags: number, password: string | null, payload?: Buffer | string) {
+        const key = password ? generateACPHeaderKey(password) : Buffer.alloc(32);
+        return new Message(0x00030001, flags, 0, MessageType.RPC, 0, key, payload);
     }
 
     // eslint-disable-next-line require-jsdoc
@@ -341,11 +352,11 @@ export default class Message {
 
     // eslint-disable-next-line require-jsdoc
     static composeMessageEx(
-        version: number, flags: number, unused: number, command: number, error_code: number, password: string,
+        version: number, flags: number, unused: number, command: number, error_code: number, password: string | null,
         payload?: Buffer | string, payload_size?: number
     ) {
-        return new Message(version, flags, unused, command, error_code, generateACPHeaderKey(password),
-            payload, payload_size);
+        const key = password ? generateACPHeaderKey(password) : Buffer.alloc(32);
+        return new Message(version, flags, unused, command, error_code, key, payload, payload_size);
     }
 
     /**

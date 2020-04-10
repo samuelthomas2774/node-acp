@@ -135,7 +135,7 @@ export default class Client {
                 payload += Property.composeRawElement(0, name instanceof Property ? name : new Property(name));
             }
 
-            const request = Message.composeGetPropCommand(4, this.password, payload);
+            const request = Message.composeGetPropCommand(4, this.session_encrypted ? null : this.password, payload);
             await session.send(request);
 
             const reply = await session.receiveMessageHeader();
@@ -211,7 +211,7 @@ export default class Client {
                 payload += Property.composeRawElement(0, prop);
             }
 
-            const request = Message.composeSetPropCommand(0, this.password, payload);
+            const request = Message.composeSetPropCommand(0, this.session_encrypted ? null : this.password, payload);
             await session.send(request);
 
             const raw_reply = await session.receiveMessageHeader();
@@ -258,7 +258,7 @@ export default class Client {
      * @return {Promise<Monitor>}
      */
     async monitor(data: MonitorRequestData = {filters: {}}) {
-        const request = Message.composeMonitorCommand(0, this.password, Buffer.concat([
+        const request = Message.composeMonitorCommand(0, this.session_encrypted ? null : this.password, Buffer.concat([
             Buffer.from([0, 0, 0, 0]),
             CFLBinaryPList.compose(data),
         ]));
@@ -275,7 +275,8 @@ export default class Client {
      */
     async rpc<F extends RPCFunction>(fn: F, inputs: RPCInputData<F>['inputs'] = {} as any) {
         const data: RPCInputData<F> = {function: fn, inputs};
-        const request = Message.composeRPCCommand(0, this.password, CFLBinaryPList.compose(data));
+        const request = Message.composeRPCCommand(0, this.session_encrypted ? null : this.password,
+            CFLBinaryPList.compose(data));
         const response = await this.send(request);
         const resdata = CFLBinaryPList.parse(response.body!);
 
@@ -324,7 +325,8 @@ export default class Client {
 
     async flashPrimary(payload: Buffer) {
         return this.session.queue(async session => {
-            await session.send(Message.composeFlashPrimaryCommand(0, this.password, payload));
+            await session.send(Message.composeFlashPrimaryCommand(
+                0, this.session_encrypted ? null : this.password, payload));
             const reply_header = await Message.parseRaw(await session.receiveMessageHeader());
             return await session.receive(reply_header.body_size);
         });
