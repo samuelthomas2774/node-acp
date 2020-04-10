@@ -344,7 +344,7 @@ export function extract(data?: Buffer) {
                     const data = Buffer.concat([last_data, chunk]);
                     const gzip_offset = data.indexOf(header_bytes);
                     if (gzip_offset > -1) {
-                        if (loglevel >= LogLevel.INFO) console.debug('Found gzip offset %d', gzip_offset);
+                        if (loglevel >= LogLevel.INFO) console.warn('Found gzip offset %d', gzip_offset);
                         chunk = data.slice(gzip_offset);
                         found_header = true;
                     } else {

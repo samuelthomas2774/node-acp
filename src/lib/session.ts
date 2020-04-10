@@ -56,7 +56,7 @@ export default class Session extends EventEmitter {
 
             // @ts-ignore
             this.socket.connect(this.port, this.host, (err: any) => {
-                if (loglevel >= LogLevel.INFO) console.log('Connected', err);
+                if (loglevel >= LogLevel.INFO) console.warn('Connected', err);
                 this.emit('connected');
                 if (err) reject(err);
                 else resolve();
@@ -245,7 +245,7 @@ export default class Session extends EventEmitter {
         }
 
         return new Promise<void>((resolve, reject) => {
-            if (loglevel >= LogLevel.DEBUG) console.info(0, 'Sending data', data);
+            if (loglevel >= LogLevel.DEBUG) console.debug(0, 'Sending data', data);
             this.socket!.write(data as Buffer, 'binary', err => {
                 if (err) reject(err);
                 else resolve();

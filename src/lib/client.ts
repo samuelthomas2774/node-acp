@@ -217,7 +217,7 @@ export default class Client {
             const reply_header = await Message.parseRaw(raw_reply);
 
             if (reply_header.error_code !== 0) {
-                if (loglevel >= LogLevel.INFO) console.info('Set properties error code', reply_header.error_code);
+                if (loglevel >= LogLevel.INFO) console.warn('Set properties error code', reply_header.error_code);
             }
             ClientError.assertOk(reply_header, 'Set properties');
 
@@ -229,7 +229,7 @@ export default class Client {
 
                 const value = await session.receive(size);
 
-                console.log('set', name, flags, size, value);
+                if (loglevel >= LogLevel.INFO) console.warn('set', name, flags, size, value);
 
                 if (flags & 1) {
                     const error_code = value.readUInt32BE(0);

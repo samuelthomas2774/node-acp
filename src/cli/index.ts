@@ -133,6 +133,7 @@ const commandHandler = <A extends ClientCommandArguments = ClientCommandArgument
         password = await prompt({
             prompt: `Password for ${argv.host || 'airport-base-station.local'}: `,
             silent: true,
+            output: process.stderr,
         });
     }
 
@@ -142,9 +143,9 @@ const commandHandler = <A extends ClientCommandArguments = ClientCommandArgument
         await client.connect();
 
         if (argv.encryption) {
-            console.log('Authenticating');
+            if (loglevel >= LogLevel.INFO) console.warn('Authenticating');
             await client.authenticate();
-            console.log('Authenticated!');
+            if (loglevel >= LogLevel.INFO) console.warn('Authenticated!');
         }
 
         const r = await handler.call(undefined, client, argv);
