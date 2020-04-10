@@ -62,6 +62,9 @@ export enum MessageType {
 }
 
 export enum ErrorCode {
+    /** No error */
+    SUCCESS = 0,
+
     // Get property
     NOT_AVAILABLE = -10, // 0xfffffff6
     INVALID_KEY = -16,

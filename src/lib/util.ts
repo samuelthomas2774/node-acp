@@ -3,6 +3,7 @@
 type MACAddress = string;
 
 import {WirelessNetworkMode} from '../types/properties';
+import Message, {ErrorCode} from './message';
 
 enum Model {
     AIRPORT_EXPRESS_2ND_GENERATION = 115,
@@ -211,6 +212,52 @@ export class UUID {
         const value = Buffer.alloc(16);
         this.value.copy(value);
         return value;
+    }
+}
+
+/**
+ * Error representing an error received from the server.
+ */
+export class ClientError extends Error {
+    /**
+     * Creates a ClientError.
+     *
+     * @param {string} message
+     * @param {number} code
+     * @param {Message} acp_message
+     */
+    constructor(message: string, readonly code: ErrorCode, readonly acp_message: Message) {
+        super(message);
+    }
+
+    /**
+     * Creates a ClientError from a Message object.
+     *
+     * @param {Message} message
+     * @param {string} description
+     * @return {ClientError}
+     */
+    static fromMessage(message: Message, description: string) {
+        const error_code_hex = '0x' +
+            (message.error_code < 0 ? message.error_code + 0x8fffffff : message.error_code).toString(16);
+
+        return new this(
+            description + ' error code ' + error_code_hex + ' ' + message.error_code +
+                (ErrorCode[message.error_code] ? ' (' + ErrorCode[message.error_code] + ')' : ''),
+            message.error_code, message
+        );
+    }
+
+    /**
+     * Throw a ClientError if a message has a non-zero error code.
+     *
+     * @param {Message} message
+     * @param {string} description
+     */
+    static assertOk(message: Message, description: string) {
+        if (message.error_code !== ErrorCode.SUCCESS) {
+            throw this.fromMessage(message, description);
+        }
     }
 }
 

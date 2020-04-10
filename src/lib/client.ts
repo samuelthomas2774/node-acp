@@ -8,7 +8,7 @@ import {RPCFunction, RPCInputData, RPCOutputData} from '../types/rpc';
 import {MonitorRequestData, MonitorData} from '../types/monitor';
 import CFLBinaryPList from './cflbinary';
 import {LogLevel, loglevel} from '..';
-import {InvalidResponseError} from './util';
+import {ClientError, InvalidResponseError} from './util';
 
 import crypto from 'crypto';
 import stream from 'stream';
@@ -144,9 +144,7 @@ export default class Client {
 
             if (loglevel >= LogLevel.DEBUG) console.debug('Get prop response', reply_header);
 
-            if (reply_header.error_code !== 0) {
-                throw new Error('Error ' + reply_header.error_code);
-            }
+            ClientError.assertOk(reply_header, 'Get properties');
 
             const props_with_values: (Property | Error)[] = [];
             let err: Error | null = null;
@@ -220,8 +218,8 @@ export default class Client {
 
             if (reply_header.error_code !== 0) {
                 if (loglevel >= LogLevel.INFO) console.info('Set properties error code', reply_header.error_code);
-                throw new Error('Received error code ' + reply_header.error_code.toString(16));
             }
+            ClientError.assertOk(reply_header, 'Set properties');
 
             const response: PropSetResponse[] = [];
 
@@ -264,6 +262,7 @@ export default class Client {
             CFLBinaryPList.compose(data),
         ]));
         const response = await this.send(request);
+        ClientError.assertOk(response, 'Monitor');
         return new Monitor(this, this.session, response);
     }
 
@@ -279,6 +278,7 @@ export default class Client {
         const request = Message.composeRPCCommand(0, this.session_encrypted ? null : this.password,
             CFLBinaryPList.compose(data));
         const response = await this.send(request);
+        ClientError.assertOk(response, 'RPC');
         const resdata = CFLBinaryPList.parse(response.body!);
 
         if (typeof resdata.status !== 'number') {
@@ -301,6 +301,7 @@ export default class Client {
             await session.send(Message.composeFeatCommand(0));
             const reply_header = await Message.parseRaw(await session.receiveMessageHeader());
             const reply = await session.receive(reply_header.body_size);
+            ClientError.assertOk(reply_header, 'Features');
             return CFLBinaryPList.parse(reply);
         });
     }
@@ -329,7 +330,9 @@ export default class Client {
             await session.send(Message.composeFlashPrimaryCommand(
                 0, this.session_encrypted ? null : this.password, payload));
             const reply_header = await Message.parseRaw(await session.receiveMessageHeader());
-            return await session.receive(reply_header.body_size);
+            const reply = await session.receive(reply_header.body_size);
+            ClientError.assertOk(reply_header, 'Flash primary');
+            return reply;
         });
     }
 
@@ -386,9 +389,7 @@ export default class Client {
 
         const response = await session.receiveMessage();
 
-        if (response.error_code !== 0) {
-            throw new Error('Authenticate stage two error code ' + response.error_code);
-        }
+        ClientError.assertOk(response, 'Authenticate stage two');
 
         const data = CFLBinaryPList.parse(response.body!);
 
@@ -475,9 +476,7 @@ export default class Client {
 
         const response = await session.receiveMessage();
 
-        if (response.error_code !== 0) {
-            throw new Error('Authenticate stage 4 error code ' + response.error_code);
-        }
+        ClientError.assertOk(response, 'Authenticate stage four');
 
         const data_2 = CFLBinaryPList.parse(response.body!);
 
@@ -512,7 +511,6 @@ export default class Client {
         try {
             srpc.checkM2(data.response);
         } catch (err) {
-            // Probably wrong password
             throw new Error('Error verifying response (M2)');
         }
 
