@@ -10,11 +10,11 @@ import CFLBinaryPList from './cflbinary';
 import {LogLevel, loglevel} from '..';
 import {ClientError, InvalidResponseError} from './util';
 
-import crypto from 'crypto';
-import stream from 'stream';
+import * as crypto from 'crypto';
+import * as stream from 'stream';
 
-import srp, {SrpParams} from 'fast-srp-hap';
-import BigInteger from 'fast-srp-hap/lib/jsbn';
+import * as srp from 'fast-srp-hap';
+import BigInteger = require('fast-srp-hap/lib/jsbn');
 
 interface PropSetResponse {
     name: PropName;
@@ -430,7 +430,7 @@ export default class Client {
         // eslint-disable-next-line no-unused-vars
         const B = data.publicKey; // B.length === 192 (not 384)
 
-        const params: SrpParams = {
+        const params: srp.SrpParams = {
             // 1536
             N_length_bits: 1536,
             N: new BigInteger(data.modulus),

@@ -2,8 +2,8 @@
 import {LogLevel, loglevel} from '..';
 import {parse, extract} from '../lib/firmware';
 import {createReadStream, createWriteStream, promises as fs} from 'fs';
-import pump from 'pump';
-import yargs from 'yargs';
+import pump = require('pump');
+import yargs = require('yargs');
 
 yargs.demandCommand();
 yargs.help();

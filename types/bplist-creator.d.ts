@@ -4,10 +4,11 @@ declare module 'bplist-creator' {
         constructor(value: number);
     }
 
-    const create: {
-        (data: any): Buffer;
-        Real: typeof Real;
-    };
+    function create(data: any): Buffer;
+
+    namespace create {
+        export {Real};
+    }
 
     export = create;
 }

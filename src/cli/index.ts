@@ -3,9 +3,9 @@ import Client, {Property, Monitor, PropName, PropType, LogLevel, loglevel} from 
 import {ValueFormatters} from '../lib/property';
 import * as cfb from '../lib/cflbinary';
 import {createAdvertisementData, reviver, replacer} from '../lib/util';
-import yargs from 'yargs';
-import path from 'path';
-import util from 'util';
+import yargs = require('yargs');
+import * as path from 'path';
+import * as util from 'util';
 
 yargs.demandCommand();
 yargs.help();
@@ -127,7 +127,7 @@ const commandHandler = <A extends ClientCommandArguments = ClientCommandArgument
     let password = argv.password;
 
     if (!password) {
-        const {default: read} = await import('read');
+        const read = await import('read');
         const prompt = util.promisify(read);
 
         password = await prompt({

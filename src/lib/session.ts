@@ -1,14 +1,13 @@
 
 import Message, {HEADER_SIZE as MESSAGE_HEADER_SIZE} from './message';
 import {HEADER_SIZE as ELEMENT_HEADER_SIZE} from './property';
-// import {ClientEncryption, ServerEncryption} from './encryption';
 import {LogLevel, loglevel, CFLBinaryPList} from '..';
 
-import adler32 from 'adler32';
+import * as adler32 from 'adler32';
 
-import net from 'net';
-import crypto from 'crypto';
-import EventEmitter from 'events';
+import * as net from 'net';
+import * as crypto from 'crypto';
+import {EventEmitter} from 'events';
 
 /**
  * Holds information about a connection to an ACP server/client.

@@ -5,9 +5,9 @@ import PropertyValueTypes from '../types/properties';
 import {UUID, replacer} from './util';
 import {LogLevel, loglevel} from '..';
 
-import ip from 'ip6addr';
+import * as ip from 'ip6addr';
 import {parseBuffer as parseBPList} from 'bplist-parser';
-import composeBPList from 'bplist-creator';
+import composeBPList = require('bplist-creator');
 
 export type PropType = keyof SupportedValues;
 

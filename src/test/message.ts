@@ -1,6 +1,6 @@
 import Message, {generateACPHeaderKey} from '../lib/message';
 import 'qunit';
-import adler32 from 'adler32';
+import * as adler32 from 'adler32';
 
 QUnit.test('Pack header', assert => {
     const expected_hex =

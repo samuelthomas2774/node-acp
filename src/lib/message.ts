@@ -5,7 +5,7 @@
 
 import {generateACPKeystream} from './keystream';
 
-import adler32 from 'adler32';
+import * as adler32 from 'adler32';
 
 interface HeaderData {
     magic: string;

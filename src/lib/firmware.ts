@@ -1,8 +1,8 @@
 
-import stream from 'stream';
-import crypto from 'crypto';
-import zlib from 'zlib';
-import adler32 from 'adler32';
+import * as stream from 'stream';
+import * as crypto from 'crypto';
+import * as zlib from 'zlib';
+import * as adler32 from 'adler32';
 import {LogLevel, loglevel} from '..';
 
 const keys: {
