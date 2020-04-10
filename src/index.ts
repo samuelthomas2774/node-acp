@@ -10,6 +10,7 @@ import * as Firmware from './lib/firmware';
 import * as Util from './lib/util';
 import * as PropertyValueTypes from './types/properties';
 export {RPCInputData, RPCOutputData, RPCFunction, RPCInputs, RPCOutputs} from './types/rpc';
+export {MonitorProp, MonitorRequestData, MonitorData} from './types/monitor';
 export {Firmware, Util, PropertyValueTypes};
 
 export enum LogLevel {

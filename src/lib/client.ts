@@ -5,6 +5,7 @@ import Property, {PropType, FormattedValues, PropertyWithValue} from './property
 import {PropName, PropTypes} from './properties';
 import PropertyValueTypes from '../types/properties';
 import {RPCFunction, RPCInputData, RPCOutputData} from '../types/rpc';
+import {MonitorRequestData, MonitorData} from '../types/monitor';
 import CFLBinaryPList from './cflbinary';
 import {LogLevel, loglevel} from '..';
 import {InvalidResponseError} from './util';
@@ -524,20 +525,6 @@ export default class Client {
         this.session.enableEncryption(key, client_iv, server_iv);
     }
 }
-
-type MonitorProp = 'logm' | 'ACPRemoteBonjour' | 'MaSt' | 'waCD' | 'waC1' | 'waRA' | 'daSt' | 'tACL' | 'dmSt' |
-    'waIP' | 'wsci' | 'sySt' | 'stat' | 'raCh' | 'waC2' | 'DynS' | 'prnR' | 'waSM' | 'iCld' | 'deSt' |
-    'raSL';
-
-interface MonitorRequestData {
-    filters?: {
-        [K in MonitorProp]?: {};
-    };
-}
-
-type MonitorData = {
-    [K in MonitorProp]?: any;
-};
 
 /**
  * ACP monitor session.
