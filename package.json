@@ -13,7 +13,7 @@
         "url": "https://gitlab.fancy.org.uk/samuel/node-acp.git"
     },
     "engines": {
-        "node": ">=10.8"
+        "node": ">=12"
     },
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
@@ -35,31 +35,31 @@
     },
     "dependencies": {
         "adler32": "^0.1.7",
-        "bplist-creator": "0.0.8",
+        "bplist-creator": "^0.0.8",
         "bplist-parser": "^0.2.0",
         "fast-srp-hap": "^1.0.1",
         "ip6addr": "^0.2.3",
         "node-persist": "^3.0.5",
         "pump": "^3.0.0",
         "read": "^1.0.7",
-        "yargs": "^12.0.5"
+        "yargs": "^15.3.1"
     },
     "peerDependencies": {
         "mdns": "^2.5.1"
     },
     "devDependencies": {
-        "@types/mdns": "0.0.33",
-        "@types/node": "^12.12.24",
+        "@types/mdns": "^0.0.33",
+        "@types/node": "^12.12.35",
         "@types/node-persist": "^3.0.0",
         "@types/pump": "^1.1.0",
-        "@types/qunit": "^2.9.0",
-        "@types/read": "0.0.28",
-        "@types/yargs": "^13.0.4",
-        "@typescript-eslint/parser": "^2.14.0",
-        "eslint": "^4.19.1",
-        "eslint-config-google": "^0.9.1",
+        "@types/qunit": "^2.9.1",
+        "@types/read": "^0.0.28",
+        "@types/yargs": "^15.0.4",
+        "@typescript-eslint/parser": "^2.27.0",
+        "eslint": "^6.8.0",
+        "eslint-config-google": "^0.14.0",
         "mdns": "^2.5.1",
         "qunit": "^2.9.3",
-        "typescript": "^3.7.4"
+        "typescript": "^3.8.3"
     }
 }
