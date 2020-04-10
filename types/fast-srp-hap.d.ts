@@ -7,7 +7,7 @@ declare namespace srp {
     }
     const params: {
         [n: string]: SrpParams;
-    }
+    };
 
     function computeVerifier(params: SrpParams, salt: Buffer, I: Buffer, P: Buffer): Buffer;
 
@@ -15,6 +15,9 @@ declare namespace srp {
     function genKey(callback: GenKeyCallback): void;
     function genKey(bytes: number, callback: GenKeyCallback): void;
 
+    /**
+     * SRP client.
+     */
     class Client {
         /**
          * Create an SRP client.
@@ -60,6 +63,9 @@ declare namespace srp {
         computeK(): Buffer;
     }
 
+    /**
+     * SRP server.
+     */
     class Server {
         constructor(params: SrpParams, salt_buf: Buffer, identity_buf: Buffer, password_buf: Buffer, secret2_buf: Buffer);
         /**
@@ -97,6 +103,9 @@ declare namespace srp {
 }
 
 declare namespace jsbn {
+    /**
+     * BigInteger.
+     */
     class BigInteger {
         constructor(number: number | string, base?: number);
         constructor(number: Buffer);

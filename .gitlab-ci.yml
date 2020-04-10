@@ -92,13 +92,14 @@ lint:
         - apt update
         - apt install -y libavahi-compat-libdnssd-dev
         - npm install
-        - npx eslint --color src/**/*.ts
+        - npx eslint --color src/**/*.ts types/**/*.d.ts
     only:
         changes:
             - .gitlab-ci.yml
             - package-lock.json
             - .eslintrc.js
             - src/**/*.ts
+            - types/**/*.d.ts
     except:
         variables:
             - $NPM_AUDIT_SCHEDULE_SKIP_BUILD
