@@ -132,7 +132,7 @@ export class CFLBinaryPListComposer {
         } else if (typeof object === 'object' && object instanceof Array || object instanceof Set) {
             const objects = [];
 
-            for (let element of object as any[]) {
+            for (const element of object as any[]) {
                 objects.push(this.packObject(element, depth + 1));
             }
 
@@ -144,7 +144,7 @@ export class CFLBinaryPListComposer {
         } else if (typeof object === 'object' && object instanceof Map) {
             const objects = [];
 
-            for (let [key, value] of object.entries() as unknown as [any, any][]) {
+            for (const [key, value] of object.entries() as unknown as [any, any][]) {
                 objects.push(this.packObject(key, depth + 1));
                 objects.push(this.packObject(value, depth + 1));
             }
@@ -157,7 +157,7 @@ export class CFLBinaryPListComposer {
         } else if (typeof object === 'object') {
             const objects = [];
 
-            for (let key in object) {
+            for (const key in object) {
                 if (!object.hasOwnProperty(key)) continue;
 
                 objects.push(this.packObject(key, depth + 1));

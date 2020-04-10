@@ -132,7 +132,7 @@ export default class Client {
         return this.session.queue(async session => {
             let payload = '';
 
-            for (let name of props) {
+            for (const name of props) {
                 payload += Property.composeRawElement(0, name instanceof Property ? name : new Property(name));
             }
 
@@ -206,7 +206,7 @@ export default class Client {
         return this.session.queue(async session => {
             let payload = '';
 
-            for (let prop of props) {
+            for (const prop of props) {
                 payload += Property.composeRawElement(0, prop);
             }
 

@@ -51,7 +51,7 @@ export default class Session extends EventEmitter {
 
             setTimeout(() => {
                 // this.reading -= 1;
-                reject('Timeout');
+                reject(new Error('Timeout'));
             }, timeout);
 
             // @ts-ignore
@@ -300,9 +300,7 @@ export default class Session extends EventEmitter {
      * @return {Promise<string>}
      */
     async receive(size: number, timeout?: number) {
-        let data = await this.receiveSize(size, timeout);
-
-        return data;
+        return await this.receiveSize(size, timeout);
     }
 
     private _queue = Promise.resolve();

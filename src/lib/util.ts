@@ -133,9 +133,13 @@ export function reviver(key: string, value: any) {
     if (typeof value === 'object' && value !== null) {
         const keys = Object.keys(value);
 
-        if (keys.length === 2 && keys.includes('type') && keys.includes('data') && value.type === 'Buffer') return Buffer.from(value.data);
-        // eslint-disable-next-line new-cap
-        if (keys.length === 2 && keys.includes('type') && keys.includes('data') && value.type === 'bigint') return BigInt(value.data);
+        if (keys.length === 2 && keys.includes('type') && keys.includes('data') && value.type === 'Buffer') {
+            return Buffer.from(value.data);
+        }
+        if (keys.length === 2 && keys.includes('type') && keys.includes('data') && value.type === 'bigint') {
+            // eslint-disable-next-line new-cap
+            return BigInt(value.data);
+        }
         if (keys.length === 2 && keys.includes('type') && keys.includes('data') && value.type === 'Error') {
             const error = new Error(value.data.message);
             // @ts-ignore
@@ -143,7 +147,9 @@ export function reviver(key: string, value: any) {
             error.stack = value.data.stack;
             return error;
         }
-        if (keys.length === 2 && keys.includes('type') && keys.includes('data') && value.type === 'UUID') return new UUID(value.data);
+        if (keys.length === 2 && keys.includes('type') && keys.includes('data') && value.type === 'UUID') {
+            return new UUID(value.data);
+        }
     }
 
     return value;

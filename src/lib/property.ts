@@ -32,7 +32,7 @@ interface HeaderData {
 export function generateACPProperties() {
     const props: PropData[] = [];
 
-    for (let [name, prop] of Object.entries(acp_properties)) {
+    for (const [name, prop] of Object.entries(acp_properties)) {
         let [type, description, validator] = prop;
 
         if (name.length !== 4) throw new Error('Bad name in ACP properties list: ' + name);

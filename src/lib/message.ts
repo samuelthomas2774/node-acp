@@ -134,15 +134,15 @@ export default class Message {
      * @return {string}
      */
     toString() {
-        return 'ACP message:'
-            + '\nBody checksum: ' + this.body_checksum
-            + '\nBody size:     ' + this.body_size
-            + '\nFlags:         ' + this.flags
-            + '\nUnused:        ' + this.unused
-            + '\nCommand:       ' + this.command + ' (' + MessageType[this.command] + ')'
-            + '\nError code:    ' + this.error_code +
-                (this.error_code !== 0 ? ' (' + ErrorCode[this.error_code] + ')' : '')
-            + '\nKey:           ' + this.key;
+        return 'ACP message:' +
+            '\nBody checksum: ' + this.body_checksum +
+            '\nBody size:     ' + this.body_size +
+            '\nFlags:         ' + this.flags +
+            '\nUnused:        ' + this.unused +
+            '\nCommand:       ' + this.command + ' (' + MessageType[this.command] + ')' +
+            '\nError code:    ' + this.error_code +
+                (this.error_code !== 0 ? ' (' + ErrorCode[this.error_code] + ')' : '') +
+            '\nKey:           ' + this.key;
     }
 
     /**

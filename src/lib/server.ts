@@ -82,7 +82,7 @@ export default abstract class Server {
 
             setTimeout(() => {
                 // this.reading -= 1;
-                reject('Timeout');
+                reject(new Error('Timeout'));
             }, timeout);
 
             // @ts-ignore
@@ -371,7 +371,7 @@ export default abstract class Server {
         let response = Buffer.alloc(0);
 
         let i = 0;
-        for (let prop of ret) {
+        for (const prop of ret) {
             response = Buffer.concat([
                 response,
                 prop instanceof Property ? Property.composeRawElement(0x00000000, prop) :
